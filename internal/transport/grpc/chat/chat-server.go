@@ -1,4 +1,4 @@
-package v1
+package chat
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 type ChatServer struct {
 	mx      sync.RWMutex //due to connections are in map, there is needed an safe concurent access to map
 	Service services.Services
+	Cfg     *config.Config
 }
 
 var errEmptyID = errors.New("no ID in context")
@@ -31,8 +32,16 @@ var conns map[string]p.ChatService_ConnectServer
 
 const userIDctx = "user_id"
 
-func (s *ChatServer) ChatServerRun(cfg *config.Config) {
+func NewServer(cfg *config.Config, services services.Services) *ChatServer {
+	return &ChatServer{
+		Service: services,
+		Cfg:     cfg,
+	}
+}
+func (s *ChatServer) ChatServerRun() error {
 	defer recover()
+
+	s.mx = sync.RWMutex{}
 
 	server := grpc.NewServer()
 
@@ -42,14 +51,14 @@ func (s *ChatServer) ChatServerRun(cfg *config.Config) {
 
 	p.RegisterChatServiceServer(server, &messageServer)
 
-	listen, err := net.Listen("tcp", cfg.GRPC.Port)
+	listen, err := net.Listen("tcp", ":"+s.Cfg.GRPC.Port)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return err
 	}
 
 	fmt.Println("Serving requests...")
-	server.Serve(listen)
+	return server.Serve(listen)
 }
 
 func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
@@ -98,6 +107,7 @@ func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan cha
 				errChan <- err
 				return
 			}
+			go s.Service.Messages.Save(res)
 
 			logger.Info("received msg to ", &res.ReceiverID)
 
@@ -107,6 +117,7 @@ func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan cha
 			if ok {
 				res.SenderID = uID
 				err := destination.Send(res)
+
 				if status.Code(err) == codes.Unavailable {
 					logger.Error(err)
 

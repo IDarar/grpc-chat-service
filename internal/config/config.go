@@ -13,11 +13,10 @@ type (
 		GRPC        GRPCConfig
 	}
 	MySQLConfig struct {
-		Host     string `mapstructure:"POSTGRES_HOST"`
-		Port     string `mapstructure:"POSTGRES_PORT"`
-		DBname   string `mapstructure:"POSTGRES_DBNAME"`
-		User     string `mapstructure:"POSTGRES_USER"`
-		Password string `mapstructure:"POSTGRES_PASSWORD"`
+		Port     string `mapstructure:"MYSQL_PORT"`
+		DBname   string `mapstructure:"MYSQL_DBNAME"`
+		User     string `mapstructure:"MYSQL_USER"`
+		Password string `mapstructure:"MYSQL_PASSWORDGO"`
 	}
 	GRPCConfig struct {
 		Port             string `mapstructure:"port"`
@@ -59,11 +58,10 @@ func unmarshal(cfg *Config) error {
 	return nil
 }
 func setFromEnv(cfg *Config) {
-	cfg.MySQL.Host = viper.GetString("host")
 	cfg.MySQL.Port = viper.GetString("port")
 	cfg.MySQL.DBname = viper.GetString("dbname")
 	cfg.MySQL.User = viper.GetString("user")
-	cfg.MySQL.Password = viper.GetString("password")
+	cfg.MySQL.Password = viper.GetString("passwordgo")
 }
 
 func parseConfigFile(filepath string) error {
@@ -86,16 +84,13 @@ func parseMySQLEnvVariables() error {
 		return err
 	}
 
-	if err := viper.BindEnv("dbname"); err != nil {
+	if err := viper.BindEnv("database"); err != nil {
 		return err
 	}
-	if err := viper.BindEnv("password"); err != nil {
+	if err := viper.BindEnv("passwordgo"); err != nil {
 		return err
 	}
 	if err := viper.BindEnv("port"); err != nil {
-		return err
-	}
-	if err := viper.BindEnv("host"); err != nil {
 		return err
 	}
 
