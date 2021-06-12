@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "/chat_service";
+import "google/protobuf/timestamp.proto";
+
+message Message {
+  string ID =1;
+  int32 Code = 2;
+  string SenderID =3;
+  string ReceiverID = 4; 
+  google.protobuf.Timestamp time = 5;
+  string Text = 6;
+}
+
+message RequestChatHistory{
+  string UserID = 1; //with who
+  int32 Offset = 2;
+
+}
+
+message ChatHistory{ 
+  repeated Message messages = 1; 
+}
+
+service ChatService { 
+  rpc Connect(stream Message) returns (stream Message); 
+  rpc GetMessages (RequestChatHistory)returns(ChatHistory);
+}
