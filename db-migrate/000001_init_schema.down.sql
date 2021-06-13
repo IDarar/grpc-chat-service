@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS messages;
+
+DROP TABLE IF EXISTS inboxes;
+
+DROP TABLE IF EXISTS users;

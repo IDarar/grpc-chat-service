@@ -4,19 +4,29 @@ option go_package = "/chat_service";
 import "google/protobuf/timestamp.proto";
 
 message Message {
-  string ID =1;
+  int32 ID =1;
   int32 Code = 2;
-  string SenderID =3;
-  string ReceiverID = 4; 
+  int32 SenderID =3;
+  int32 ReceiverID = 4; 
   google.protobuf.Timestamp time = 5;
   string Text = 6;
 }
 
-message RequestChatHistory{
-  string UserID = 1; //with who
-  int32 Offset = 2;
+message Inbox{
+  uint32 ID =1;
+  uint32 UserID =2; 
+  uint32 SenderID =3;
+  string LastMsg =4; //Maybe make it as id, not msg. And then method for getting Msg with its ID
+  uint32 UnseenNumber =5;
 
 }
+
+message RequestChatHistory{
+  string InboxHash =1;
+  string UserID = 2; //with who
+  int32 Offset = 3;
+}
+
 
 message ChatHistory{ 
   repeated Message messages = 1; 
