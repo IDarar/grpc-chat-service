@@ -4,7 +4,7 @@ CREATE TABLE `users` (
 
 CREATE TABLE `messages` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
-  `inbox_hash` INT,
+  `inbox_hash` VARCHAR  (60),
   `created_at` TIMESTAMP,
   `sender_id` BIGINT,
   `text` TEXT ,
@@ -16,8 +16,8 @@ CREATE TABLE `inboxes` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `user_id` BIGINT,
   `sender_id` BIGINT,
-  `inbox_hash` INT,
-  `last_msg` CHAR (60),
+  `inbox_hash` VARCHAR  (60),
+  `last_msg` VARCHAR  (60),
   `seen`  TINYINT (1),
   `unseen_nubmber` INT
 );

@@ -2,9 +2,9 @@ package chat
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
@@ -24,11 +24,9 @@ type ChatServer struct {
 	Cfg     *config.Config
 }
 
-var errEmptyID = errors.New("no ID in context")
-
 //map contains clients's connections
 //TODO think another way of getting connections to send msgs
-var conns map[string]p.ChatService_ConnectServer
+var conns map[int64]p.ChatService_ConnectServer
 
 const userIDctx = "user_id"
 
@@ -38,6 +36,7 @@ func NewServer(cfg *config.Config, services services.Services) *ChatServer {
 		Cfg:     cfg,
 	}
 }
+
 func (s *ChatServer) ChatServerRun() error {
 	defer recover()
 
@@ -45,7 +44,7 @@ func (s *ChatServer) ChatServerRun() error {
 
 	server := grpc.NewServer()
 
-	conns = make(map[string]p.ChatService_ConnectServer)
+	conns = make(map[int64]p.ChatService_ConnectServer)
 
 	var messageServer ChatServer
 
@@ -61,6 +60,7 @@ func (s *ChatServer) ChatServerRun() error {
 	return server.Serve(listen)
 }
 
+//On first request from client we store connection, on further requests handle messages
 func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	defer recover()
 
@@ -78,14 +78,20 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 
 	senderID := md.Get(userIDctx)[0]
 
+	sID, err := strconv.Atoi(senderID)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
 	s.mx.Lock()
-	conns[senderID] = out
+	conns[int64(sID)] = out
 	s.mx.Unlock()
 
 	errChan := make(chan error)
 
 	//run goroutin handling msgs
-	go s.receiveMsgs(out, errChan, senderID)
+	go s.receiveMsgs(out, errChan, int64(sID))
 
 	//block until there is an error
 	return <-errChan
@@ -94,8 +100,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory) (*p.ChatHistory, error) {
 	return nil, nil
 }
+func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error)
 
-func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan chan error, uID string) {
+func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan chan error, uID int64) {
 	for {
 		select {
 		case <-errChan:
@@ -116,6 +123,8 @@ func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan cha
 			s.mx.RUnlock()
 			if ok {
 				res.SenderID = uID
+
+				//I think it will better if client side will handle creating inboxes. Otherwise it is needed to check if inbox exists on each message
 				err := destination.Send(res)
 
 				if status.Code(err) == codes.Unavailable {

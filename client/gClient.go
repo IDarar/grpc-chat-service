@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	//
 	p "github.com/IDarar/grpc-chat-service/chat_service"
@@ -103,18 +104,24 @@ func sendMsgs(stream p.ChatService_ConnectClient, errChan chan error) {
 
 			scanner := bufio.NewScanner(os.Stdin)
 
-			fmt.Println("Enter who you want to send a message ...")
+			fmt.Println("Enter ID of who you want to send a message ...")
 			scanner.Scan()
 
 			receiver := scanner.Text()
+
+			rID, err := strconv.Atoi(receiver)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
 
 			fmt.Println("Enter text of your message ...")
 			scanner.Scan()
 
 			text := scanner.Text()
-			msg := p.Message{ReceiverID: receiver, Text: text, Time: timestamppb.Now()}
+			msg := p.Message{ReceiverID: int64(rID), Text: text, Time: timestamppb.Now()}
 
-			err := stream.Send(&msg)
+			err = stream.Send(&msg)
 			if err != nil {
 				logger.Error(err)
 				errChan <- err
@@ -128,7 +135,7 @@ func sendMsgs(stream p.ChatService_ConnectClient, errChan chan error) {
 func getCtxWithName() (context.Context, error) {
 	var name string
 
-	fmt.Println("Please input your name to enter the chat")
+	fmt.Println("Please input your ID to enter the chat")
 
 	_, err := fmt.Fscan(os.Stdin, &name)
 	if err != nil {

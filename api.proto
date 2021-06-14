@@ -4,35 +4,44 @@ option go_package = "/chat_service";
 import "google/protobuf/timestamp.proto";
 
 message Message {
-  int32 ID =1;
-  int32 Code = 2;
-  int32 SenderID =3;
-  int32 ReceiverID = 4; 
+  int64 ID =1;
+  int64 Code = 2;
+  int64 SenderID =3;
+  int64 ReceiverID = 4; 
   google.protobuf.Timestamp time = 5;
   string Text = 6;
+  string InboxHash = 7; //e g sID 4567 and rID 76416 -> 4567_76416
 }
 
 message Inbox{
-  uint32 ID =1;
-  uint32 UserID =2; 
-  uint32 SenderID =3;
-  string LastMsg =4; //Maybe make it as id, not msg. And then method for getting Msg with its ID
-  uint32 UnseenNumber =5;
+  int64 ID =1;
+  int64 UserID =2; 
+  int64 SenderID =3;
+  string LastMsg =4; 
+  google.protobuf.Timestamp LastMsgTime = 5;
+  int64 UnseenNumber =6;
 
 }
 
 message RequestChatHistory{
-  string InboxHash =1;
-  string UserID = 2; //with who
-  int32 Offset = 3;
+  int64 InboxHash =1;
+  int64 Offset = 3;
 }
-
+message RequestInboxes{
+  int64 UserID =2; 
+  int64 Offset = 3; //if 0 - all
+}
 
 message ChatHistory{ 
   repeated Message messages = 1; 
 }
 
+message Chats{ 
+  repeated Inbox messages = 1; 
+}
+
 service ChatService { 
   rpc Connect(stream Message) returns (stream Message); 
   rpc GetMessages (RequestChatHistory)returns(ChatHistory);
+  rpc GetInboxes (RequestInboxes)returns(Chats);
 }

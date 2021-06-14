@@ -2,6 +2,8 @@ run:
 	go run ./cmd/chat-server/main.go --env
 startcompose:
 	sudo docker-compose up -d	
+stopcompose:
+	sudo docker-compose down
 entermysql:
 	sudo docker exec -it mysql mysql -u root -p
 upmigrate:
