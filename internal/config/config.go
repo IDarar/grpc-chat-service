@@ -11,6 +11,7 @@ type (
 		Environment string
 		MySQL       MySQLConfig
 		GRPC        GRPCConfig
+		Kafka       KafkaConfig
 	}
 	MySQLConfig struct {
 		Port     string `mapstructure:"MYSQL_PORT"`
@@ -25,6 +26,13 @@ type (
 		ClientCACertFile string `mapstructure:"clientcacertfile"`
 		ClientKeyFile    string `mapstructure:"clinetkeyfile"`
 		ClientCertFile   string `mapstructure:"clinetcertfile"`
+	}
+	KafkaConfig struct {
+		Host              string
+		UsernameSASL      string
+		PaswordSASL       string
+		NumPartitions     int
+		ReplicationFactor int
 	}
 )
 
@@ -62,6 +70,12 @@ func setFromEnv(cfg *Config) {
 	cfg.MySQL.DBname = viper.GetString("dbname")
 	cfg.MySQL.User = viper.GetString("user")
 	cfg.MySQL.Password = viper.GetString("passwordgo")
+
+	cfg.Kafka.UsernameSASL = viper.GetString("usersasl")
+	cfg.Kafka.PaswordSASL = viper.GetString("passwordsasl")
+	cfg.Kafka.PaswordSASL = viper.GetString("host")
+	cfg.Kafka.PaswordSASL = viper.GetString("numpartitions")
+	cfg.Kafka.PaswordSASL = viper.GetString("replicationfactor")
 }
 
 func parseConfigFile(filepath string) error {
@@ -74,6 +88,10 @@ func parseConfigFile(filepath string) error {
 }
 
 func parseEnv() error {
+	err := pareseKafkavariables()
+	if err != nil {
+		return err
+	}
 	return parseMySQLEnvVariables()
 }
 
@@ -96,6 +114,28 @@ func parseMySQLEnvVariables() error {
 
 	viper.SetEnvPrefix("database")
 	if err := viper.BindEnv("url"); err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func pareseKafkavariables() error {
+	viper.SetEnvPrefix("kafka")
+	if err := viper.BindEnv("usersasl"); err != nil {
+		return err
+	}
+
+	if err := viper.BindEnv("passwordsasl"); err != nil {
+		return err
+	}
+	if err := viper.BindEnv("host"); err != nil {
+		return err
+	}
+	if err := viper.BindEnv("numpartitions"); err != nil {
+		return err
+	}
+	if err := viper.BindEnv("replicationfactor"); err != nil {
 		return err
 	}
 	return nil

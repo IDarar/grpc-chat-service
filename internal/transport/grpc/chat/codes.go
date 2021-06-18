@@ -13,4 +13,5 @@ const (
 	Sended   = iota
 	Failed   = iota
 	NewInbox = iota
+	Ping     = iota
 )

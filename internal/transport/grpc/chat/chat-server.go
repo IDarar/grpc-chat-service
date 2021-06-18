@@ -10,23 +10,30 @@ import (
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/services"
+	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 type ChatServer struct {
 	mx      sync.RWMutex //due to connections are in map, there is needed an safe concurent access to map
 	Service services.Services
+	MQ      *mq.MQ
 	Cfg     *config.Config
+}
+
+type ChatConnection struct {
+	ID      int
+	conn    p.ChatService_ConnectServer
+	errChan chan error
 }
 
 //map contains clients's connections
 //TODO think another way of getting connections to send msgs
-var conns map[int64]p.ChatService_ConnectServer
+//MQ there is only solution I see, for, if app will be scaled for more than 1 instance, conns will be on different servers, so it will cause problems.
+var conns map[int64]*ChatConnection
 
 const userIDctx = "user_id"
 
@@ -44,7 +51,7 @@ func (s *ChatServer) ChatServerRun() error {
 
 	server := grpc.NewServer()
 
-	conns = make(map[int64]p.ChatService_ConnectServer)
+	conns = make(map[int64]*ChatConnection)
 
 	var messageServer ChatServer
 
@@ -55,6 +62,9 @@ func (s *ChatServer) ChatServerRun() error {
 		fmt.Println(err)
 		return err
 	}
+
+	//run checking connections before start server
+	go ping()
 
 	fmt.Println("Serving requests...")
 	return server.Serve(listen)
@@ -84,14 +94,19 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 		return err
 	}
 
-	s.mx.Lock()
-	conns[int64(sID)] = out
-	s.mx.Unlock()
-
+	//initalise connection object
 	errChan := make(chan error)
 
+	chatConn := &ChatConnection{ID: sID, conn: out, errChan: errChan}
+
+	s.mx.Lock()
+	conns[int64(sID)] = chatConn
+	s.mx.Unlock()
+
 	//run goroutin handling msgs
-	go s.receiveMsgs(out, errChan, int64(sID))
+	go s.receiveMsgsFromGrpc(chatConn)
+
+	go s.receiveMsgsFromMQ(chatConn)
 
 	//block until there is an error
 	return <-errChan
@@ -100,44 +115,60 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory) (*p.ChatHistory, error) {
 	return nil, nil
 }
-func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error)
+func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error) {
+	return nil, nil
+}
 
-func (s *ChatServer) receiveMsgs(stream p.ChatService_ConnectServer, errChan chan error, uID int64) {
+func (s *ChatServer) receiveMsgsFromGrpc(chatConn *ChatConnection) {
 	for {
 		select {
-		case <-errChan:
+		case <-chatConn.errChan:
 			return
+
 		default:
-			res, err := stream.Recv()
+			res, err := chatConn.conn.Recv()
 			if err != nil {
 				logger.Error(err)
-				errChan <- err
+				chatConn.errChan <- err
 				return
 			}
+
 			go s.Service.Messages.Save(res)
 
 			logger.Info("received msg to ", &res.ReceiverID)
 
-			s.mx.RLock()
-			destination, ok := conns[res.ReceiverID]
-			s.mx.RUnlock()
-			if ok {
-				res.SenderID = uID
-
-				//I think it will better if client side will handle creating inboxes. Otherwise it is needed to check if inbox exists on each message
-				err := destination.Send(res)
-
-				if status.Code(err) == codes.Unavailable {
-					logger.Error(err)
-
-					s.mx.Lock()
-					delete(conns, res.ReceiverID)
-					s.mx.Unlock()
-				}
-			} else {
-				logger.Info("user is not connected")
+			err = s.MQ.ChatMQ.WriteMessages(res)
+			if err != nil {
+				logger.Error(err)
+				chatConn.errChan <- err
+				return
 			}
 
+		}
+	}
+}
+
+func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
+	for {
+		select {
+		case <-chatConn.errChan:
+			return
+
+		default:
+			msg, err := s.MQ.ChatMQ.ReadMessages(int(chatConn.ID))
+			if err != nil {
+				logger.Error(err)
+				chatConn.errChan <- err
+				return
+			}
+			logger.Info("received msg to ", &msg.ReceiverID)
+
+			err = chatConn.conn.Send(msg)
+			if err != nil {
+				logger.Error(err)
+				chatConn.errChan <- err
+				return
+			}
 		}
 	}
 }

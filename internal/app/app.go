@@ -14,6 +14,17 @@ import (
 	"github.com/IDarar/hub/pkg/logger"
 )
 
+type network struct {
+}
+
+func (n *network) Network() string {
+	return "tcp"
+}
+
+func (n *network) String() string {
+	return "localhost:49157"
+}
+
 func Run(configPath string) {
 	envInit()
 
@@ -22,7 +33,6 @@ func Run(configPath string) {
 		logger.Error(err)
 		return
 	}
-
 	logger.Info(cfg)
 
 	db, err := mysql.NewMySQLDB(cfg)
@@ -48,10 +58,14 @@ func envInit() {
 
 	if *e {
 		os.Setenv("MYSQL_PORT", "3306")
-
 		os.Setenv("MYSQL_DATABASE", "chat")
-
 		os.Setenv("MYSQL_PASSWORDGO", "secret")
+
+		os.Setenv("KAFKA_USERSASL", "admin")
+		os.Setenv("KAFKA_PASSWORDSASL", "admin-secret")
+		os.Setenv("KAFKA_HOST", "localhost:9092")
+		os.Setenv("KAFKA_NUMPARTITIONS", "1")
+		os.Setenv("KAFKA_REPLICATIONFACTOR", "1")
 
 		//TODO env for test db
 		//os.Setenv("DATABASE_URL", "user=postgres dbname=hub_tests password=123 sslmode=disabled")
