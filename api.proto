@@ -10,7 +10,7 @@ message Message {
   int64 ReceiverID = 4; 
   google.protobuf.Timestamp time = 5;
   string Text = 6;
-  string InboxHash = 7; //e g sID 4567 and rID 76416 -> 4567_76416
+  int64 InboxHash = 7; //e g sID 45670 and rID 76416 -> 45670076416
 }
 
 message Inbox{
@@ -20,7 +20,6 @@ message Inbox{
   string LastMsg =4; 
   google.protobuf.Timestamp LastMsgTime = 5;
   int64 UnseenNumber =6;
-
 }
 
 message RequestChatHistory{

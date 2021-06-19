@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -67,15 +68,27 @@ func unmarshal(cfg *Config) error {
 }
 func setFromEnv(cfg *Config) {
 	cfg.MySQL.Port = viper.GetString("port")
-	cfg.MySQL.DBname = viper.GetString("dbname")
+	cfg.MySQL.DBname = viper.GetString("database")
 	cfg.MySQL.User = viper.GetString("user")
 	cfg.MySQL.Password = viper.GetString("passwordgo")
 
 	cfg.Kafka.UsernameSASL = viper.GetString("usersasl")
 	cfg.Kafka.PaswordSASL = viper.GetString("passwordsasl")
-	cfg.Kafka.PaswordSASL = viper.GetString("host")
-	cfg.Kafka.PaswordSASL = viper.GetString("numpartitions")
-	cfg.Kafka.PaswordSASL = viper.GetString("replicationfactor")
+	cfg.Kafka.Host = viper.GetString("host")
+
+	intNumP, err := strconv.Atoi(viper.GetString("numpartitions"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.Kafka.NumPartitions = intNumP
+
+	intRFactor, err := strconv.Atoi(viper.GetString("replicationfactor"))
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.Kafka.ReplicationFactor = intRFactor
 }
 
 func parseConfigFile(filepath string) error {
@@ -112,10 +125,6 @@ func parseMySQLEnvVariables() error {
 		return err
 	}
 
-	viper.SetEnvPrefix("database")
-	if err := viper.BindEnv("url"); err != nil {
-		return err
-	}
 	return nil
 
 }

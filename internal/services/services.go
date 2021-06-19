@@ -6,7 +6,7 @@ import (
 )
 
 type Messages interface {
-	Save(*chat_service.Message) error
+	Save(*chat_service.Message)
 }
 
 type Services struct {
@@ -18,6 +18,6 @@ type Deps struct {
 }
 
 func NewServices(deps Deps) *Services {
-	messages := NewMessagesService(&deps.Repos.Messages)
+	messages := NewMessagesService(deps.Repos.Messages)
 	return &Services{Messages: messages}
 }

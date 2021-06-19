@@ -103,34 +103,20 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	conns[int64(sID)] = chatConn
 	s.mx.Unlock()
 
-	//run goroutin handling msgs
-	go s.receiveMsgsFromGrpc(chatConn)
-
+	//handle messages from MQ
 	go s.receiveMsgsFromMQ(chatConn)
 
-	//block until there is an error
-	return <-errChan
-}
-
-func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory) (*p.ChatHistory, error) {
-	return nil, nil
-}
-func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error) {
-	return nil, nil
-}
-
-func (s *ChatServer) receiveMsgsFromGrpc(chatConn *ChatConnection) {
+	//handle messages from from connection
 	for {
 		select {
 		case <-chatConn.errChan:
-			return
-
+			return err
 		default:
 			res, err := chatConn.conn.Recv()
 			if err != nil {
 				logger.Error(err)
 				chatConn.errChan <- err
-				return
+				return err
 			}
 
 			go s.Service.Messages.Save(res)
@@ -141,11 +127,18 @@ func (s *ChatServer) receiveMsgsFromGrpc(chatConn *ChatConnection) {
 			if err != nil {
 				logger.Error(err)
 				chatConn.errChan <- err
-				return
+				return err
 			}
 
 		}
 	}
+}
+
+func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory) (*p.ChatHistory, error) {
+	return nil, nil
+}
+func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error) {
+	return nil, nil
 }
 
 func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
@@ -153,7 +146,6 @@ func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
 		select {
 		case <-chatConn.errChan:
 			return
-
 		default:
 			msg, err := s.MQ.ChatMQ.ReadMessages(int(chatConn.ID))
 			if err != nil {

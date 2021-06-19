@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/repository"
@@ -36,6 +38,29 @@ func Run(configPath string) {
 	logger.Info(cfg)
 
 	db, err := mysql.NewMySQLDB(cfg)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	defer db.Close()
+
+	tx, err := db.BeginTx(context.Background(), nil)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	res, err := db.Exec("INSERT INTO messages (inbox_hash, created_at, sender_id, text) VALUES (?, ?, ?, ?)", 450456, time.Now(), 45, "msg.Text")
+
+	if err != nil {
+		logger.Error(err)
+		tx.Rollback()
+		return
+	}
+	logger.Info(res)
+
+	err = tx.Commit()
 	if err != nil {
 		logger.Error(err)
 		return
