@@ -1,8 +1,11 @@
 package domain
 
 import (
+	"errors"
 	"time"
 )
+
+var ErrFailedToSaveMsg = errors.New("failed to save msg")
 
 type Message struct {
 	ID         int
@@ -16,5 +19,4 @@ type Message struct {
 type Inbox struct {
 	ID   int
 	Hash int //maybe it will be of some different type
-
 }

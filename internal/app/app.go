@@ -1,31 +1,19 @@
 package app
 
 import (
-	"context"
 	"flag"
 	"log"
 	"os"
-	"time"
 
 	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/repository"
 	"github.com/IDarar/grpc-chat-service/internal/repository/mysql"
 	"github.com/IDarar/grpc-chat-service/internal/services"
 	"github.com/IDarar/grpc-chat-service/internal/transport/grpc/chat"
+	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
 
 	"github.com/IDarar/hub/pkg/logger"
 )
-
-type network struct {
-}
-
-func (n *network) Network() string {
-	return "tcp"
-}
-
-func (n *network) String() string {
-	return "localhost:49157"
-}
 
 func Run(configPath string) {
 	envInit()
@@ -45,34 +33,23 @@ func Run(configPath string) {
 
 	defer db.Close()
 
-	tx, err := db.BeginTx(context.Background(), nil)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	res, err := db.Exec("INSERT INTO messages (inbox_hash, created_at, sender_id, text) VALUES (?, ?, ?, ?)", 450456, time.Now(), 45, "msg.Text")
-
-	if err != nil {
-		logger.Error(err)
-		tx.Rollback()
-		return
-	}
-	logger.Info(res)
-
-	err = tx.Commit()
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
 	repos := repository.NewRepositories(db)
 
 	services := services.NewServices(services.Deps{Repos: repos})
 
-	chatServer := chat.NewServer(cfg, *services)
+	dialer := mq.NewKafkaDialer(cfg)
+	cmq := mq.NewMQ(dialer, cfg)
 
-	log.Fatal(chatServer.ChatServerRun())
+	chatServer := chat.NewServer(cfg, *services, cmq)
+
+	//_, err = chatServer.MQ.ChatMQ.ReadMessages(1)
+
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	log.Fatal(chat.ChatServerRun(chatServer))
 }
 
 func envInit() {

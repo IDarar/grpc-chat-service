@@ -36,7 +36,7 @@ type Message struct {
 	ReceiverID int64                  `protobuf:"varint,4,opt,name=ReceiverID,proto3" json:"ReceiverID,omitempty"`
 	Time       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=time,proto3" json:"time,omitempty"`
 	Text       string                 `protobuf:"bytes,6,opt,name=Text,proto3" json:"Text,omitempty"`
-	InboxHash  int64                  `protobuf:"varint,7,opt,name=InboxHash,proto3" json:"InboxHash,omitempty"` //e g sID 4567 and rID 76416 -> 4567_76416
+	InboxHash  int64                  `protobuf:"varint,7,opt,name=InboxHash,proto3" json:"InboxHash,omitempty"` //e g sID 45670 and rID 76416 -> 45670076416
 }
 
 func (x *Message) Reset() {
@@ -207,6 +207,62 @@ func (x *Inbox) GetUnseenNumber() int64 {
 	return 0
 }
 
+//Send message if user dont have chat with another user
+type RequestCreateInbox struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ReceiverID int64  `protobuf:"varint,2,opt,name=ReceiverID,proto3" json:"ReceiverID,omitempty"`
+	Text       string `protobuf:"bytes,6,opt,name=Text,proto3" json:"Text,omitempty"`
+}
+
+func (x *RequestCreateInbox) Reset() {
+	*x = RequestCreateInbox{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RequestCreateInbox) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestCreateInbox) ProtoMessage() {}
+
+func (x *RequestCreateInbox) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestCreateInbox.ProtoReflect.Descriptor instead.
+func (*RequestCreateInbox) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RequestCreateInbox) GetReceiverID() int64 {
+	if x != nil {
+		return x.ReceiverID
+	}
+	return 0
+}
+
+func (x *RequestCreateInbox) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
 type RequestChatHistory struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -219,7 +275,7 @@ type RequestChatHistory struct {
 func (x *RequestChatHistory) Reset() {
 	*x = RequestChatHistory{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[2]
+		mi := &file_api_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -232,7 +288,7 @@ func (x *RequestChatHistory) String() string {
 func (*RequestChatHistory) ProtoMessage() {}
 
 func (x *RequestChatHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[2]
+	mi := &file_api_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +301,7 @@ func (x *RequestChatHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestChatHistory.ProtoReflect.Descriptor instead.
 func (*RequestChatHistory) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{2}
+	return file_api_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RequestChatHistory) GetInboxHash() int64 {
@@ -274,7 +330,7 @@ type RequestInboxes struct {
 func (x *RequestInboxes) Reset() {
 	*x = RequestInboxes{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[3]
+		mi := &file_api_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -287,7 +343,7 @@ func (x *RequestInboxes) String() string {
 func (*RequestInboxes) ProtoMessage() {}
 
 func (x *RequestInboxes) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[3]
+	mi := &file_api_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +356,7 @@ func (x *RequestInboxes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestInboxes.ProtoReflect.Descriptor instead.
 func (*RequestInboxes) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{3}
+	return file_api_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RequestInboxes) GetUserID() int64 {
@@ -322,13 +378,14 @@ type ChatHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Messages []*Message `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	Inbox    *Inbox     `protobuf:"bytes,1,opt,name=Inbox,proto3" json:"Inbox,omitempty"`
+	Messages []*Message `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
 }
 
 func (x *ChatHistory) Reset() {
 	*x = ChatHistory{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[4]
+		mi := &file_api_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -341,7 +398,7 @@ func (x *ChatHistory) String() string {
 func (*ChatHistory) ProtoMessage() {}
 
 func (x *ChatHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[4]
+	mi := &file_api_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -354,7 +411,14 @@ func (x *ChatHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatHistory.ProtoReflect.Descriptor instead.
 func (*ChatHistory) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{4}
+	return file_api_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ChatHistory) GetInbox() *Inbox {
+	if x != nil {
+		return x.Inbox
+	}
+	return nil
 }
 
 func (x *ChatHistory) GetMessages() []*Message {
@@ -375,7 +439,7 @@ type Chats struct {
 func (x *Chats) Reset() {
 	*x = Chats{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_proto_msgTypes[5]
+		mi := &file_api_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -388,7 +452,7 @@ func (x *Chats) String() string {
 func (*Chats) ProtoMessage() {}
 
 func (x *Chats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[5]
+	mi := &file_api_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -401,7 +465,7 @@ func (x *Chats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chats.ProtoReflect.Descriptor instead.
 func (*Chats) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{5}
+	return file_api_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Chats) GetMessages() []*Inbox {
@@ -442,32 +506,42 @@ var file_api_proto_rawDesc = []byte{
 	0x61, 0x6d, 0x70, 0x52, 0x0b, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x73, 0x67, 0x54, 0x69, 0x6d, 0x65,
 	0x12, 0x22, 0x0a, 0x0c, 0x55, 0x6e, 0x73, 0x65, 0x65, 0x6e, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72,
 	0x18, 0x06, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0c, 0x55, 0x6e, 0x73, 0x65, 0x65, 0x6e, 0x4e, 0x75,
-	0x6d, 0x62, 0x65, 0x72, 0x22, 0x4a, 0x0a, 0x12, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43,
-	0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x12, 0x1c, 0x0a, 0x09, 0x49, 0x6e,
-	0x62, 0x6f, 0x78, 0x48, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x49,
-	0x6e, 0x62, 0x6f, 0x78, 0x48, 0x61, 0x73, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x4f, 0x66, 0x66, 0x73,
-	0x65, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74,
-	0x22, 0x40, 0x0a, 0x0e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x62, 0x6f, 0x78,
-	0x65, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x55, 0x73, 0x65, 0x72, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x03, 0x52, 0x06, 0x55, 0x73, 0x65, 0x72, 0x49, 0x44, 0x12, 0x16, 0x0a, 0x06, 0x4f, 0x66,
-	0x66, 0x73, 0x65, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x4f, 0x66, 0x66, 0x73,
-	0x65, 0x74, 0x22, 0x33, 0x0a, 0x0b, 0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72,
-	0x79, 0x12, 0x24, 0x0a, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x18, 0x01, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x08, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x08, 0x6d,
-	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x22, 0x2b, 0x0a, 0x05, 0x43, 0x68, 0x61, 0x74, 0x73,
-	0x12, 0x22, 0x0a, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x06, 0x2e, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x52, 0x08, 0x6d, 0x65, 0x73, 0x73,
-	0x61, 0x67, 0x65, 0x73, 0x32, 0x89, 0x01, 0x0a, 0x0b, 0x43, 0x68, 0x61, 0x74, 0x53, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x12, 0x21, 0x0a, 0x07, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x12,
-	0x08, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x1a, 0x08, 0x2e, 0x4d, 0x65, 0x73, 0x73,
-	0x61, 0x67, 0x65, 0x28, 0x01, 0x30, 0x01, 0x12, 0x30, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x4d, 0x65,
-	0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x12, 0x13, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x1a, 0x0c, 0x2e, 0x43, 0x68,
-	0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x12, 0x25, 0x0a, 0x0a, 0x47, 0x65, 0x74,
-	0x49, 0x6e, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12, 0x0f, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x1a, 0x06, 0x2e, 0x43, 0x68, 0x61, 0x74, 0x73,
-	0x42, 0x0f, 0x5a, 0x0d, 0x2f, 0x63, 0x68, 0x61, 0x74, 0x5f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6d, 0x62, 0x65, 0x72, 0x22, 0x48, 0x0a, 0x12, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x12, 0x1e, 0x0a, 0x0a, 0x52, 0x65,
+	0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0a,
+	0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x49, 0x44, 0x12, 0x12, 0x0a, 0x04, 0x54, 0x65,
+	0x78, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x54, 0x65, 0x78, 0x74, 0x22, 0x4a,
+	0x0a, 0x12, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73,
+	0x74, 0x6f, 0x72, 0x79, 0x12, 0x1c, 0x0a, 0x09, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x48, 0x61, 0x73,
+	0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x48, 0x61,
+	0x73, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x03, 0x52, 0x06, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x22, 0x40, 0x0a, 0x0e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x06,
+	0x55, 0x73, 0x65, 0x72, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x55, 0x73,
+	0x65, 0x72, 0x49, 0x44, 0x12, 0x16, 0x0a, 0x06, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x22, 0x51, 0x0a, 0x0b,
+	0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x12, 0x1c, 0x0a, 0x05, 0x49,
+	0x6e, 0x62, 0x6f, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x49, 0x6e, 0x62,
+	0x6f, 0x78, 0x52, 0x05, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x12, 0x24, 0x0a, 0x08, 0x6d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x08, 0x2e, 0x4d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x22,
+	0x2b, 0x0a, 0x05, 0x43, 0x68, 0x61, 0x74, 0x73, 0x12, 0x22, 0x0a, 0x08, 0x6d, 0x65, 0x73, 0x73,
+	0x61, 0x67, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x49, 0x6e, 0x62,
+	0x6f, 0x78, 0x52, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x32, 0xbb, 0x01, 0x0a,
+	0x0b, 0x43, 0x68, 0x61, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x21, 0x0a, 0x07,
+	0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x12, 0x08, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x1a, 0x08, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x28, 0x01, 0x30, 0x01, 0x12,
+	0x30, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x12, 0x13,
+	0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74,
+	0x6f, 0x72, 0x79, 0x1a, 0x0c, 0x2e, 0x43, 0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72,
+	0x79, 0x12, 0x25, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12,
+	0x0f, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x65, 0x73,
+	0x1a, 0x06, 0x2e, 0x43, 0x68, 0x61, 0x74, 0x73, 0x12, 0x30, 0x0a, 0x0b, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x12, 0x13, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x62, 0x6f, 0x78, 0x1a, 0x0c, 0x2e, 0x43,
+	0x68, 0x61, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x42, 0x0f, 0x5a, 0x0d, 0x2f, 0x63,
+	0x68, 0x61, 0x74, 0x5f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -482,32 +556,36 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_api_proto_goTypes = []interface{}{
 	(*Message)(nil),               // 0: Message
 	(*Inbox)(nil),                 // 1: Inbox
-	(*RequestChatHistory)(nil),    // 2: RequestChatHistory
-	(*RequestInboxes)(nil),        // 3: RequestInboxes
-	(*ChatHistory)(nil),           // 4: ChatHistory
-	(*Chats)(nil),                 // 5: Chats
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*RequestCreateInbox)(nil),    // 2: RequestCreateInbox
+	(*RequestChatHistory)(nil),    // 3: RequestChatHistory
+	(*RequestInboxes)(nil),        // 4: RequestInboxes
+	(*ChatHistory)(nil),           // 5: ChatHistory
+	(*Chats)(nil),                 // 6: Chats
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_api_proto_depIdxs = []int32{
-	6, // 0: Message.time:type_name -> google.protobuf.Timestamp
-	6, // 1: Inbox.LastMsgTime:type_name -> google.protobuf.Timestamp
-	0, // 2: ChatHistory.messages:type_name -> Message
-	1, // 3: Chats.messages:type_name -> Inbox
-	0, // 4: ChatService.Connect:input_type -> Message
-	2, // 5: ChatService.GetMessages:input_type -> RequestChatHistory
-	3, // 6: ChatService.GetInboxes:input_type -> RequestInboxes
-	0, // 7: ChatService.Connect:output_type -> Message
-	4, // 8: ChatService.GetMessages:output_type -> ChatHistory
-	5, // 9: ChatService.GetInboxes:output_type -> Chats
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	7, // 0: Message.time:type_name -> google.protobuf.Timestamp
+	7, // 1: Inbox.LastMsgTime:type_name -> google.protobuf.Timestamp
+	1, // 2: ChatHistory.Inbox:type_name -> Inbox
+	0, // 3: ChatHistory.messages:type_name -> Message
+	1, // 4: Chats.messages:type_name -> Inbox
+	0, // 5: ChatService.Connect:input_type -> Message
+	3, // 6: ChatService.GetMessages:input_type -> RequestChatHistory
+	4, // 7: ChatService.GetInboxes:input_type -> RequestInboxes
+	2, // 8: ChatService.CreateInbox:input_type -> RequestCreateInbox
+	0, // 9: ChatService.Connect:output_type -> Message
+	5, // 10: ChatService.GetMessages:output_type -> ChatHistory
+	6, // 11: ChatService.GetInboxes:output_type -> Chats
+	5, // 12: ChatService.CreateInbox:output_type -> ChatHistory
+	9, // [9:13] is the sub-list for method output_type
+	5, // [5:9] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -541,7 +619,7 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestChatHistory); i {
+			switch v := v.(*RequestCreateInbox); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -553,7 +631,7 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestInboxes); i {
+			switch v := v.(*RequestChatHistory); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -565,7 +643,7 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ChatHistory); i {
+			switch v := v.(*RequestInboxes); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -577,6 +655,18 @@ func file_api_proto_init() {
 			}
 		}
 		file_api_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ChatHistory); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Chats); i {
 			case 0:
 				return &v.state
@@ -595,7 +685,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -624,6 +714,7 @@ type ChatServiceClient interface {
 	Connect(ctx context.Context, opts ...grpc.CallOption) (ChatService_ConnectClient, error)
 	GetMessages(ctx context.Context, in *RequestChatHistory, opts ...grpc.CallOption) (*ChatHistory, error)
 	GetInboxes(ctx context.Context, in *RequestInboxes, opts ...grpc.CallOption) (*Chats, error)
+	CreateInbox(ctx context.Context, in *RequestCreateInbox, opts ...grpc.CallOption) (*ChatHistory, error)
 }
 
 type chatServiceClient struct {
@@ -683,11 +774,21 @@ func (c *chatServiceClient) GetInboxes(ctx context.Context, in *RequestInboxes, 
 	return out, nil
 }
 
+func (c *chatServiceClient) CreateInbox(ctx context.Context, in *RequestCreateInbox, opts ...grpc.CallOption) (*ChatHistory, error) {
+	out := new(ChatHistory)
+	err := c.cc.Invoke(ctx, "/ChatService/CreateInbox", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 type ChatServiceServer interface {
 	Connect(ChatService_ConnectServer) error
 	GetMessages(context.Context, *RequestChatHistory) (*ChatHistory, error)
 	GetInboxes(context.Context, *RequestInboxes) (*Chats, error)
+	CreateInbox(context.Context, *RequestCreateInbox) (*ChatHistory, error)
 }
 
 // UnimplementedChatServiceServer can be embedded to have forward compatible implementations.
@@ -702,6 +803,9 @@ func (*UnimplementedChatServiceServer) GetMessages(context.Context, *RequestChat
 }
 func (*UnimplementedChatServiceServer) GetInboxes(context.Context, *RequestInboxes) (*Chats, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInboxes not implemented")
+}
+func (*UnimplementedChatServiceServer) CreateInbox(context.Context, *RequestCreateInbox) (*ChatHistory, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateInbox not implemented")
 }
 
 func RegisterChatServiceServer(s *grpc.Server, srv ChatServiceServer) {
@@ -770,6 +874,24 @@ func _ChatService_GetInboxes_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_CreateInbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestCreateInbox)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).CreateInbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ChatService/CreateInbox",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).CreateInbox(ctx, req.(*RequestCreateInbox))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ChatService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ChatService",
 	HandlerType: (*ChatServiceServer)(nil),
@@ -781,6 +903,10 @@ var _ChatService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInboxes",
 			Handler:    _ChatService_GetInboxes_Handler,
+		},
+		{
+			MethodName: "CreateInbox",
+			Handler:    _ChatService_CreateInbox_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

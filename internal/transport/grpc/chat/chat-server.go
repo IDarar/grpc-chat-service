@@ -9,6 +9,7 @@ import (
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/config"
+	"github.com/IDarar/grpc-chat-service/internal/domain"
 	"github.com/IDarar/grpc-chat-service/internal/services"
 	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
 
@@ -20,8 +21,8 @@ import (
 type ChatServer struct {
 	mx      sync.RWMutex //due to connections are in map, there is needed an safe concurent access to map
 	Service services.Services
-	MQ      *mq.MQ
-	Cfg     *config.Config
+	MQ      mq.MQ
+	Cfg     config.Config
 }
 
 type ChatConnection struct {
@@ -37,14 +38,15 @@ var conns map[int64]*ChatConnection
 
 const userIDctx = "user_id"
 
-func NewServer(cfg *config.Config, services services.Services) *ChatServer {
+func NewServer(cfg *config.Config, services services.Services, mq mq.MQ) *ChatServer {
 	return &ChatServer{
 		Service: services,
-		Cfg:     cfg,
+		Cfg:     *cfg,
+		MQ:      mq,
 	}
 }
 
-func (s *ChatServer) ChatServerRun() error {
+func ChatServerRun(s *ChatServer) error {
 	defer recover()
 
 	s.mx = sync.RWMutex{}
@@ -53,9 +55,7 @@ func (s *ChatServer) ChatServerRun() error {
 
 	conns = make(map[int64]*ChatConnection)
 
-	var messageServer ChatServer
-
-	p.RegisterChatServiceServer(server, &messageServer)
+	p.RegisterChatServiceServer(server, s)
 
 	listen, err := net.Listen("tcp", ":"+s.Cfg.GRPC.Port)
 	if err != nil {
@@ -109,7 +109,12 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	//handle messages from from connection
 	for {
 		select {
-		case <-chatConn.errChan:
+		case err = <-chatConn.errChan:
+			if err == domain.ErrFailedToSaveMsg {
+				logger.Error(err)
+				chatConn.conn.Send(&p.Message{Code: Failed})
+				break
+			}
 			return err
 		default:
 			res, err := chatConn.conn.Recv()
@@ -119,9 +124,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				return err
 			}
 
-			go s.Service.Messages.Save(res)
-
 			logger.Info("received msg to ", &res.ReceiverID)
+
+			go s.Service.Messages.Save(res, chatConn.errChan)
 
 			err = s.MQ.ChatMQ.WriteMessages(res)
 			if err != nil {
@@ -138,6 +143,10 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory)
 	return nil, nil
 }
 func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error) {
+	return nil, nil
+}
+
+func (s *ChatServer) CreateInbox(ctx context.Context, req *p.RequestCreateInbox) (*p.ChatHistory, error) {
 	return nil, nil
 }
 

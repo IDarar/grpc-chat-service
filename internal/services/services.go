@@ -6,7 +6,7 @@ import (
 )
 
 type Messages interface {
-	Save(*chat_service.Message)
+	Save(*chat_service.Message, chan error)
 }
 
 type Services struct {

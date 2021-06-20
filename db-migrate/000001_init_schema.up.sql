@@ -24,6 +24,8 @@ CREATE TABLE `inboxes` (
 
 ALTER TABLE `messages` ADD FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`);
 
+ALTER TABLE `messages` ADD FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`);
+
 ALTER TABLE `inboxes` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 ALTER TABLE `inboxes` ADD FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`);

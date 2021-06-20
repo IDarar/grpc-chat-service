@@ -10,13 +10,16 @@ type MessagesService struct {
 	repo repository.Messages
 }
 
-func (s *MessagesService) Save(msg *chat_service.Message) {
+func (s *MessagesService) Save(msg *chat_service.Message, errCh chan error) {
 	//calculate inbox hash
 	msg.SenderID *= 10
 	msg.InboxHash = msg.SenderID*padding(msg.ReceiverID) + msg.ReceiverID
 	msg.Time = timestamppb.Now()
 
-	s.repo.Save(msg)
+	err := s.repo.Save(msg)
+	if err != nil {
+		errCh <- err
+	}
 }
 
 func NewMessagesService(repo repository.Messages) *MessagesService {

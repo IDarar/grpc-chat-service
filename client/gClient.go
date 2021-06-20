@@ -89,7 +89,7 @@ func receiveMsgs(stream p.ChatService_ConnectClient, errChan chan error) {
 				errChan <- err
 				return
 			}
-			logger.Info("You received a message from ", res.SenderID, " text is ", res.Text)
+			logger.Info("You received a message from ", res.SenderID, " text is ", res.Text, " code is ", res.Code)
 
 		}
 	}

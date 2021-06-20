@@ -15,6 +15,6 @@ type MQ struct {
 	ChatMQ ChatMQ
 }
 
-func NewMQ(dialer *kafka.Dialer, cfg *config.Config) *MQ {
-	return &MQ{ChatMQ: NewChatMQ(dialer, *cfg)}
+func NewMQ(dialer *kafka.Dialer, cfg *config.Config) MQ {
+	return MQ{ChatMQ: NewChatMQ(dialer, *cfg)}
 }

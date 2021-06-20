@@ -22,6 +22,12 @@ message Inbox{
   int64 UnseenNumber =6;
 }
 
+//Send message if user dont have chat with another user
+message RequestCreateInbox{
+  int64 ReceiverID =2;
+  string Text = 6;
+}
+
 message RequestChatHistory{
   int64 InboxHash =1;
   int64 Offset = 3;
@@ -32,7 +38,8 @@ message RequestInboxes{
 }
 
 message ChatHistory{ 
-  repeated Message messages = 1; 
+  Inbox Inbox =1;
+  repeated Message messages = 2; 
 }
 
 message Chats{ 
@@ -43,4 +50,5 @@ service ChatService {
   rpc Connect(stream Message) returns (stream Message); 
   rpc GetMessages (RequestChatHistory)returns(ChatHistory);
   rpc GetInboxes (RequestInboxes)returns(Chats);
+  rpc CreateInbox (RequestCreateInbox)returns(ChatHistory);
 }

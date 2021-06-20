@@ -42,7 +42,6 @@ func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	//key is ID of user
 	key, err := strconv.Atoi(string(m.Key))
 	if err != nil {
@@ -64,5 +63,6 @@ func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
 func (k *ChatKafka) WriteMessages(msg *p.Message) error {
 	err := k.writer.WriteMessages(context.Background())
 	domain.Release(msg)
+
 	return err
 }

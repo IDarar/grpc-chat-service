@@ -8,7 +8,7 @@ import (
 )
 
 type Messages interface {
-	Save(msg *p.Message)
+	Save(msg *p.Message) error
 }
 
 type Repositories struct {
