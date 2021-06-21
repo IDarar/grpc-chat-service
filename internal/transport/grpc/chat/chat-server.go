@@ -94,6 +94,8 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 		return err
 	}
 
+	logger.Info("user with id ", senderID, " joins to chat")
+
 	//initalise connection object
 	errChan := make(chan error)
 
@@ -158,19 +160,27 @@ func (s *ChatServer) CreateInbox(ctx context.Context, req *p.RequestCreateInbox)
 func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
 	for {
 		select {
-		case <-chatConn.errChan:
+		case err := <-chatConn.errChan:
+			if err == domain.ErrFailedToSaveMsg {
+				logger.Error("err saving ", err)
+
+				break
+			}
+			logger.Error("error on mq, exit goroutine ...")
 			return
 		default:
 			msg, err := s.MQ.ChatMQ.ReadMessages(int(chatConn.ID))
 			if err != nil {
 				logger.Error(err)
 				chatConn.errChan <- err
+				logger.Error("error on mq, exit goroutine ...")
 				return
 			}
 			if msg == nil {
+				logger.Info("nil message on mq")
 				break
 			}
-			logger.Info("received msg to ", &msg.ReceiverID, " on MQ")
+			logger.Info("received msg to ", msg.ReceiverID, " on MQ")
 
 			err = chatConn.conn.Send(msg)
 			if err != nil {

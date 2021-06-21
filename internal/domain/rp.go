@@ -1,11 +1,7 @@
 package domain
 
-import (
-	p "github.com/IDarar/grpc-chat-service/chat_service"
-	"github.com/IDarar/hub/pkg/logger"
-)
-
 //Maybe it doesn't make sense there, but intresting to try
+/*
 const MessagePoolSize = 800
 
 var pool chan *p.Message
@@ -33,3 +29,4 @@ func Release(m *p.Message) {
 	default:
 	}
 }
+*/

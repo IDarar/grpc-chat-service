@@ -3,11 +3,11 @@ package mq
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/config"
-	"github.com/IDarar/grpc-chat-service/internal/domain"
 	"github.com/IDarar/hub/pkg/logger"
 	"github.com/segmentio/kafka-go"
 )
@@ -44,15 +44,12 @@ func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
 		return nil, err
 	}
 	//key is ID of user
-	key, err := strconv.Atoi(string(m.Key))
-	if err != nil {
-		return nil, err
-	}
+	key, _ := strconv.Atoi(string(m.Key))
 	if key != uID {
 		return nil, nil
 	}
 
-	msg := domain.Alloc()
+	msg := &p.Message{}
 	err = json.Unmarshal(m.Value, msg)
 
 	if err != nil {
@@ -62,7 +59,15 @@ func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
 }
 
 func (k *ChatKafka) WriteMessages(msg *p.Message) error {
-	err := k.writer.WriteMessages(context.Background(), kafka.Message{Key: []byte("10"), Value: []byte("123")})
+	encoded, err := json.Marshal(msg)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	byteRID := fmt.Sprint(msg.ReceiverID)
+
+	err = k.writer.WriteMessages(context.Background(), kafka.Message{Key: []byte(byteRID), Value: encoded})
 	if err != nil {
 		logger.Error(err)
 		return err
