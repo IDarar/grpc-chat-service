@@ -2,6 +2,7 @@ package domain
 
 import (
 	p "github.com/IDarar/grpc-chat-service/chat_service"
+	"github.com/IDarar/hub/pkg/logger"
 )
 
 //Maybe it doesn't make sense there, but intresting to try
@@ -19,6 +20,9 @@ func Alloc() *p.Message {
 		return m
 	default:
 		m := &p.Message{}
+
+		logger.Info("allocating msg")
+
 		return m
 	}
 }

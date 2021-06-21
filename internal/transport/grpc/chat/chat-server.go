@@ -111,8 +111,10 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 		select {
 		case err = <-chatConn.errChan:
 			if err == domain.ErrFailedToSaveMsg {
-				logger.Error(err)
+				logger.Error("err saving ", err)
 				chatConn.conn.Send(&p.Message{Code: Failed})
+
+				//TODO test how it will work with select
 				break
 			}
 			return err
@@ -124,13 +126,16 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				return err
 			}
 
-			logger.Info("received msg to ", &res.ReceiverID)
+			res.SenderID = int64(sID)
+			logger.Info("received msg from ", res.SenderID)
+
+			logger.Info("received msg to ", res.ReceiverID, " on gRPC")
 
 			go s.Service.Messages.Save(res, chatConn.errChan)
 
 			err = s.MQ.ChatMQ.WriteMessages(res)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("err writing to kafka ", err)
 				chatConn.errChan <- err
 				return err
 			}
@@ -162,7 +167,10 @@ func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
 				chatConn.errChan <- err
 				return
 			}
-			logger.Info("received msg to ", &msg.ReceiverID)
+			if msg == nil {
+				break
+			}
+			logger.Info("received msg to ", &msg.ReceiverID, " on MQ")
 
 			err = chatConn.conn.Send(msg)
 			if err != nil {

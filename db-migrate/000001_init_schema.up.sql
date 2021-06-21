@@ -19,7 +19,7 @@ CREATE TABLE `inboxes` (
   `inbox_hash` VARCHAR  (60),
   `last_msg` VARCHAR  (60),
   `seen`  TINYINT (1),
-  `unseen_nubmber` INT
+  `unseen_number` INT
 );
 
 ALTER TABLE `messages` ADD FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`);

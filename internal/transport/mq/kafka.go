@@ -1,8 +1,6 @@
 package mq
 
 import (
-	"net"
-	"strconv"
 	"time"
 
 	"github.com/IDarar/grpc-chat-service/internal/config"
@@ -30,27 +28,13 @@ func NewKafkaDialer(cfg *config.Config) *kafka.Dialer {
 		panic(err.Error())
 	}
 
-	//Init kafka creating chat topic
-	controller, err := conn.Controller()
-	if err != nil {
-		panic(err.Error())
-	}
-	var controllerConn *kafka.Conn
-
-	controllerConn, err = dialer.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
-	if err != nil {
-		panic(err.Error())
+	topicConfigs := kafka.TopicConfig{
+		Topic:             chatTopic,
+		NumPartitions:     1,
+		ReplicationFactor: 1,
 	}
 
-	topicConfigs := []kafka.TopicConfig{
-		{
-			Topic:             chatTopic,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		},
-	}
-
-	err = controllerConn.CreateTopics(topicConfigs...)
+	err = conn.CreateTopics(topicConfigs)
 	if err != nil {
 		panic(err.Error())
 	}

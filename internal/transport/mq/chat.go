@@ -8,6 +8,7 @@ import (
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/domain"
+	"github.com/IDarar/hub/pkg/logger"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -61,8 +62,11 @@ func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
 }
 
 func (k *ChatKafka) WriteMessages(msg *p.Message) error {
-	err := k.writer.WriteMessages(context.Background())
-	domain.Release(msg)
+	err := k.writer.WriteMessages(context.Background(), kafka.Message{Key: []byte("10"), Value: []byte("123")})
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
 
-	return err
+	return nil
 }

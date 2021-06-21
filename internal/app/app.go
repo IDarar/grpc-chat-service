@@ -38,16 +38,10 @@ func Run(configPath string) {
 	services := services.NewServices(services.Deps{Repos: repos})
 
 	dialer := mq.NewKafkaDialer(cfg)
+
 	cmq := mq.NewMQ(dialer, cfg)
 
 	chatServer := chat.NewServer(cfg, *services, cmq)
-
-	//_, err = chatServer.MQ.ChatMQ.ReadMessages(1)
-
-	if err != nil {
-		logger.Error(err)
-		return
-	}
 
 	log.Fatal(chat.ChatServerRun(chatServer))
 }
@@ -66,10 +60,44 @@ func envInit() {
 		os.Setenv("KAFKA_USERSASL", "admin")
 		os.Setenv("KAFKA_PASSWORDSASL", "admin-secret")
 		os.Setenv("KAFKA_HOST", "localhost:9092")
-		os.Setenv("KAFKA_NUMPARTITIONS", "1")
-		os.Setenv("KAFKA_REPLICATIONFACTOR", "1")
+		os.Setenv("KAFKA_NUMPARTITIONS", "0")
+		os.Setenv("KAFKA_REPLICATIONFACTOR", "0")
 
 		//TODO env for test db
 		//os.Setenv("DATABASE_URL", "user=postgres dbname=hub_tests password=123 sslmode=disabled")
 	}
 }
+
+/*
+	w := kafka.NewWriter(kafka.WriterConfig{
+		Brokers: []string{cfg.Kafka.Host},
+
+		Topic:    "chat-messages",
+		Balancer: &kafka.Hash{},
+		Dialer:   dialer,
+	})
+
+	w.Addr = kafka.TCP(cfg.Kafka.Host)
+
+	err = w.WriteMessages(context.Background(), kafka.Message{Key: []byte("123"), Value: []byte("fasfajsfklaj")})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:   []string{cfg.Kafka.Host},
+		Topic:     "chat-messages",
+		Partition: cfg.Kafka.NumPartitions,
+		MaxBytes:  10e6, // 10MB
+		Dialer:    dialer,
+	})
+
+	m, err := r.ReadMessage(context.Background())
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	logger.Info(m)
+*/
