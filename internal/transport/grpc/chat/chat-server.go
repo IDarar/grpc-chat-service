@@ -8,43 +8,14 @@ import (
 	"sync"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
-	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/domain"
-	"github.com/IDarar/grpc-chat-service/internal/services"
-	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
-
-type ChatServer struct {
-	mx      sync.RWMutex //due to connections are in map, there is needed an safe concurent access to map
-	Service services.Services
-	MQ      mq.MQ
-	Cfg     config.Config
-}
-
-type ChatConnection struct {
-	ID      int
-	conn    p.ChatService_ConnectServer
-	errChan chan error
-}
-
-//map contains clients's connections
-//TODO think another way of getting connections to send msgs
-//MQ there is only solution I see, for, if app will be scaled for more than 1 instance, conns will be on different servers, so it will cause problems.
-var conns map[int64]*ChatConnection
-
-const userIDctx = "user_id"
-
-func NewServer(cfg *config.Config, services services.Services, mq mq.MQ) *ChatServer {
-	return &ChatServer{
-		Service: services,
-		Cfg:     *cfg,
-		MQ:      mq,
-	}
-}
 
 func ChatServerRun(s *ChatServer) error {
 	defer recover()
@@ -66,6 +37,9 @@ func ChatServerRun(s *ChatServer) error {
 	//run checking connections before start server
 	go ping()
 
+	//run reading messages from mq
+	go s.receiveMsgsFromMQ(conns)
+
 	fmt.Println("Serving requests...")
 	return server.Serve(listen)
 }
@@ -80,6 +54,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 		return err
 	}
 
+	//get user ID from metadata
 	md, ok := metadata.FromIncomingContext(out.Context())
 	if !ok {
 		logger.Error(errEmptyID)
@@ -105,10 +80,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	conns[int64(sID)] = chatConn
 	s.mx.Unlock()
 
-	//handle messages from MQ
-	go s.receiveMsgsFromMQ(chatConn)
-
-	//handle messages from from connection
+	//handle messages from connection
 	for {
 		select {
 		case err = <-chatConn.errChan:
@@ -116,8 +88,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				logger.Error("err saving ", err)
 				chatConn.conn.Send(&p.Message{Code: Failed})
 
-				//TODO test how it will work with select
-				break
+				continue
 			}
 			return err
 		default:
@@ -128,18 +99,42 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				return err
 			}
 
+			logger.Info(res)
+
 			res.SenderID = int64(sID)
+
 			logger.Info("received msg from ", res.SenderID)
 
 			logger.Info("received msg to ", res.ReceiverID, " on gRPC")
 
 			go s.Service.Messages.Save(res, chatConn.errChan)
 
-			err = s.MQ.ChatMQ.WriteMessages(res)
-			if err != nil {
-				logger.Error("err writing to kafka ", err)
-				chatConn.errChan <- err
-				return err
+			logger.Info("received msg to ", &res.ReceiverID)
+
+			//get the connection from map
+			s.mx.RLock()
+			destination, ok := conns[res.ReceiverID]
+			s.mx.RUnlock()
+
+			//if exists send msg directly
+			//otherwise user is not connected to this server
+			//so last try is to send msg to mq, and maybe other instances handle needed connection
+			//or user is not cconnected
+			if ok {
+				res.SenderID = int64(sID)
+				err := destination.conn.Send(res)
+				if status.Code(err) == codes.Unavailable {
+					logger.Error(err)
+					delete(conns, res.ReceiverID)
+				}
+			} else {
+				logger.Info("user is not connected to this server, send msg to MQ")
+				err = s.MQ.ChatMQ.WriteMessages(res)
+				if err != nil {
+					logger.Error("err writing to kafka ", err)
+					chatConn.errChan <- err
+					return err
+				}
 			}
 
 		}
@@ -157,37 +152,29 @@ func (s *ChatServer) CreateInbox(ctx context.Context, req *p.RequestCreateInbox)
 	return nil, nil
 }
 
-func (s *ChatServer) receiveMsgsFromMQ(chatConn *ChatConnection) {
+//for it is much more efficient to see in map if connection exists than to create reader for every connection
+//there will be on reader for all connections. Further there can be many readers for particular amount of connections.
+func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*ChatConnection) {
 	for {
-		select {
-		case err := <-chatConn.errChan:
-			if err == domain.ErrFailedToSaveMsg {
-				logger.Error("err saving ", err)
 
-				break
-			}
-			logger.Error("error on mq, exit goroutine ...")
-			return
-		default:
-			msg, err := s.MQ.ChatMQ.ReadMessages(int(chatConn.ID))
-			if err != nil {
-				logger.Error(err)
-				chatConn.errChan <- err
-				logger.Error("error on mq, exit goroutine ...")
-				return
-			}
-			if msg == nil {
-				logger.Info("nil message on mq")
-				break
-			}
-			logger.Info("received msg to ", msg.ReceiverID, " on MQ")
-
-			err = chatConn.conn.Send(msg)
-			if err != nil {
-				logger.Error(err)
-				chatConn.errChan <- err
-				return
-			}
+		msg, err := s.MQ.ChatMQ.ReadMessages()
+		if err != nil {
+			logger.Error(err)
+			logger.Error("error on mq, exit goroutine ...", err)
+			continue
 		}
+		if msg == nil {
+			logger.Info("nil message on mq")
+			continue
+		}
+		logger.Info("received msg to ", msg.ReceiverID, " on MQ")
+
+		s.mx.RLock()
+		err = conns[msg.ReceiverID].conn.Send(msg)
+		if err != nil {
+			logger.Error(err)
+			delete(conns, msg.ReceiverID)
+		}
+		s.mx.RUnlock()
 	}
 }

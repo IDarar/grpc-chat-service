@@ -43,6 +43,16 @@ func Run(configPath string) {
 
 	chatServer := chat.NewServer(cfg, *services, cmq)
 
+	conn, err := dialer.Dial("tcp", "localhost:9092")
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	_ = chatServer
+
+	defer conn.DeleteTopics(mq.ChatTopic)
+
 	log.Fatal(chat.ChatServerRun(chatServer))
 }
 

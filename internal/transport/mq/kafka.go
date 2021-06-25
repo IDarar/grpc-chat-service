@@ -8,7 +8,7 @@ import (
 	"github.com/segmentio/kafka-go/sasl/plain"
 )
 
-const chatTopic = "chat-messages"
+const ChatTopic = "chat-messages"
 
 func NewKafkaDialer(cfg *config.Config) *kafka.Dialer {
 
@@ -29,7 +29,7 @@ func NewKafkaDialer(cfg *config.Config) *kafka.Dialer {
 	}
 
 	topicConfigs := kafka.TopicConfig{
-		Topic:             chatTopic,
+		Topic:             ChatTopic,
 		NumPartitions:     1,
 		ReplicationFactor: 1,
 	}

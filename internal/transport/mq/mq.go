@@ -7,7 +7,7 @@ import (
 )
 
 type ChatMQ interface {
-	ReadMessages(uID int) (*p.Message, error)
+	ReadMessages() (*p.Message, error)
 	WriteMessages(msg *p.Message) error
 }
 

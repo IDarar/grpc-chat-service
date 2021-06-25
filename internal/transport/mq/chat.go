@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"time"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/config"
@@ -20,15 +20,16 @@ type ChatKafka struct {
 //Maybe later add custom partition r/w creation
 func NewChatMQ(dialer *kafka.Dialer, cfg config.Config) *ChatKafka {
 	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{cfg.Kafka.Host},
-		Topic:    chatTopic,
-		Balancer: &kafka.Hash{},
-		Dialer:   dialer,
+		Brokers:     []string{cfg.Kafka.Host},
+		Topic:       ChatTopic,
+		Balancer:    &kafka.Hash{},
+		Dialer:      dialer,
+		ReadTimeout: 3 * time.Second,
 	})
 
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:   []string{cfg.Kafka.Host},
-		Topic:     chatTopic,
+		Topic:     ChatTopic,
 		Partition: cfg.Kafka.NumPartitions,
 		MaxBytes:  10e6, // 10MB
 		Dialer:    dialer,
@@ -37,25 +38,33 @@ func NewChatMQ(dialer *kafka.Dialer, cfg config.Config) *ChatKafka {
 	return &ChatKafka{writer: w, reader: r}
 }
 
+func NewKafkaReader(dialer *kafka.Dialer, cfg config.Config) *ChatKafka {
+	return nil
+}
+
 //gets messages from queue and checks if it is for needed user
-func (k *ChatKafka) ReadMessages(uID int) (*p.Message, error) {
+func (k *ChatKafka) ReadMessages() (*p.Message, error) {
 	m, err := k.reader.ReadMessage(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	//key is ID of user
-	key, _ := strconv.Atoi(string(m.Key))
-	if key != uID {
+	if string(m.Key) == "" {
+		logger.Info("msg without key")
 		return nil, nil
 	}
 
-	msg := &p.Message{}
-	err = json.Unmarshal(m.Value, msg)
+	msg := p.Message{}
 
+	logger.Info(m.Value, string(m.Value))
+
+	err = json.Unmarshal(m.Value, &msg)
 	if err != nil {
+		logger.Info(&msg)
 		return nil, err
 	}
-	return msg, err
+
+	return &msg, err
 }
 
 func (k *ChatKafka) WriteMessages(msg *p.Message) error {

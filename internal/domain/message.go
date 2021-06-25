@@ -2,21 +2,18 @@ package domain
 
 import (
 	"errors"
-	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ErrFailedToSaveMsg = errors.New("failed to save msg")
 
 type Message struct {
-	ID         int
-	Code       int
-	SenderID   string
-	ReceiverID string
-	Time       time.Time
-	Text       string
-}
-
-type Inbox struct {
-	ID   int
-	Hash int //maybe it will be of some different type
+	ID         int64                  `json:"id,omitempty"`
+	Code       int64                  `json:"code,omitempty"`
+	SenderID   int64                  `json:"sender_id,omitempty"`
+	ReceiverID int64                  `json:"receiver_id,omitempty"`
+	Time       *timestamppb.Timestamp `json:"time,omitempty"`
+	Text       string                 `json:"text,omitempty"`
+	InboxHash  int64                  `json:"inbox_hash,omitempty"`
 }
