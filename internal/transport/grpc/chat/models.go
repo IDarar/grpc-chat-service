@@ -16,16 +16,21 @@ type ChatServer struct {
 	Cfg     config.Config
 }
 
-type ChatConnection struct {
-	ID      int
+type UserConnections struct {
+	ID    int
+	conns []*Connection
+}
+
+type Connection struct {
 	conn    p.ChatService_ConnectServer
 	errChan chan error
 }
 
-//map contains clients's connections
+//map contains array of clients's connections
 //TODO think another way of getting connections to send msgs
 //MQ there is only solution I see, for, if app will be scaled for more than 1 instance, conns will be on different servers, so it will cause problems.
-var conns map[int64]*ChatConnection
+//array of connections is needed because thtere is only id with which needed user can be found, but he can have multiple connections
+var userConns map[int64]*UserConnections
 
 const userIDctx = "user_id"
 

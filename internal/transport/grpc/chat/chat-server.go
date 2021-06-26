@@ -24,7 +24,7 @@ func ChatServerRun(s *ChatServer) error {
 
 	server := grpc.NewServer()
 
-	conns = make(map[int64]*ChatConnection)
+	userConns = make(map[int64]*UserConnections)
 
 	p.RegisterChatServiceServer(server, s)
 
@@ -35,7 +35,7 @@ func ChatServerRun(s *ChatServer) error {
 	}
 
 	//run checking connections before start server
-	go ping()
+	go s.ping()
 
 	//run reading messages from mq
 	go s.receiveMsgsFromMQ(conns)
@@ -77,7 +77,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	chatConn := &ChatConnection{ID: sID, conn: out, errChan: errChan}
 
 	s.mx.Lock()
-	conns[int64(sID)] = chatConn
+	userConns[int64(sID)] = chatConn
 	s.mx.Unlock()
 
 	//handle messages from connection
@@ -155,7 +155,7 @@ func (s *ChatServer) CreateInbox(ctx context.Context, req *p.RequestCreateInbox)
 
 //for it is much more efficient to see in map if connection exists than to create reader for every connection
 //there will be on reader for all connections. Further there can be many readers for particular amount of connections.
-func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*ChatConnection) {
+func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*UserConnections) {
 	for {
 
 		msg, err := s.MQ.ChatMQ.ReadMessages()
