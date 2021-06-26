@@ -83,6 +83,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	//handle messages from connection
 	for {
 		select {
+		//exit if there is an errror
 		case err = <-chatConn.errChan:
 			if err == domain.ErrFailedToSaveMsg {
 				logger.Error("err saving ", err)
@@ -91,6 +92,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				continue
 			}
 			return err
+		//otherwise handle messages from grpc connections
 		default:
 			res, err := chatConn.conn.Recv()
 			if err != nil {
@@ -107,9 +109,8 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 
 			logger.Info("received msg to ", res.ReceiverID, " on gRPC")
 
+			//save msg asyncroniously
 			go s.Service.Messages.Save(res, chatConn.errChan)
-
-			logger.Info("received msg to ", &res.ReceiverID)
 
 			//get the connection from map
 			s.mx.RLock()
@@ -117,9 +118,6 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 			s.mx.RUnlock()
 
 			//if exists send msg directly
-			//otherwise user is not connected to this server
-			//so last try is to send msg to mq, and maybe other instances handle needed connection
-			//or user is not cconnected
 			if ok {
 				res.SenderID = int64(sID)
 				err := destination.conn.Send(res)
@@ -127,6 +125,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 					logger.Error(err)
 					delete(conns, res.ReceiverID)
 				}
+				//otherwise user is not connected to this server
+				//so last try is to send msg to mq, and maybe other instances handle needed connection
+				//or user is not cconnected
 			} else {
 				logger.Info("user is not connected to this server, send msg to MQ")
 				err = s.MQ.ChatMQ.WriteMessages(res)

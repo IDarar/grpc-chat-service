@@ -34,6 +34,7 @@ type (
 		PaswordSASL       string
 		NumPartitions     int
 		ReplicationFactor int
+		GroupID           string //maybe later it will be an array of groupid
 	}
 )
 
@@ -75,6 +76,7 @@ func setFromEnv(cfg *Config) {
 	cfg.Kafka.UsernameSASL = viper.GetString("usersasl")
 	cfg.Kafka.PaswordSASL = viper.GetString("passwordsasl")
 	cfg.Kafka.Host = viper.GetString("host")
+	cfg.Kafka.GroupID = viper.GetString("groupid")
 
 	intNumP, err := strconv.Atoi(viper.GetString("numpartitions"))
 	if err != nil {
@@ -147,6 +149,10 @@ func pareseKafkavariables() error {
 	if err := viper.BindEnv("replicationfactor"); err != nil {
 		return err
 	}
+	if err := viper.BindEnv("groupid"); err != nil {
+		return err
+	}
+
 	return nil
 
 }

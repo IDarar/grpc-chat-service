@@ -33,6 +33,7 @@ func NewChatMQ(dialer *kafka.Dialer, cfg config.Config) *ChatKafka {
 		Partition: cfg.Kafka.NumPartitions,
 		MaxBytes:  10e6, // 10MB
 		Dialer:    dialer,
+		GroupID:   cfg.Kafka.GroupID,
 	})
 
 	return &ChatKafka{writer: w, reader: r}
