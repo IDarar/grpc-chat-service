@@ -12,9 +12,7 @@ import (
 
 	"github.com/IDarar/hub/pkg/logger"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 func ChatServerRun(s *ChatServer) error {
@@ -38,7 +36,7 @@ func ChatServerRun(s *ChatServer) error {
 	go s.ping()
 
 	//run reading messages from mq
-	go s.receiveMsgsFromMQ(conns)
+	go s.receiveMsgsFromMQ(userConns)
 
 	fmt.Println("Serving requests...")
 	return server.Serve(listen)
@@ -46,8 +44,6 @@ func ChatServerRun(s *ChatServer) error {
 
 //On first request from client we store connection, on further requests handle messages
 func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
-	defer recover()
-
 	_, err := out.Recv()
 	if err != nil {
 		logger.Error(err)
@@ -69,35 +65,32 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 		return err
 	}
 
-	logger.Info("user with id ", senderID, " joins to chat")
-
 	//initalise connection object
 	errChan := make(chan error)
 
-	chatConn := &ChatConnection{ID: sID, conn: out, errChan: errChan}
-
-	s.mx.Lock()
-	userConns[int64(sID)] = chatConn
-	s.mx.Unlock()
+	s.addConnection(sID, &out)
 
 	//handle messages from connection
 	for {
 		select {
 		//exit if there is an errror
-		case err = <-chatConn.errChan:
+		case err = <-errChan:
 			if err == domain.ErrFailedToSaveMsg {
 				logger.Error("err saving ", err)
-				chatConn.conn.Send(&p.Message{Code: Failed})
+				out.Send(&p.Message{Code: Failed})
 
 				continue
 			}
+
+			//remove connection
+
 			return err
 		//otherwise handle messages from grpc connections
 		default:
-			res, err := chatConn.conn.Recv()
+			res, err := out.Recv()
 			if err != nil {
 				logger.Error(err)
-				chatConn.errChan <- err
+				errChan <- err
 				return err
 			}
 
@@ -110,34 +103,27 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 			logger.Info("received msg to ", res.ReceiverID, " on gRPC")
 
 			//save msg asyncroniously
-			go s.Service.Messages.Save(res, chatConn.errChan)
+			go s.Service.Messages.Save(res, errChan)
 
 			//get the connection from map
 			s.mx.RLock()
-			destination, ok := conns[res.ReceiverID]
+			destination, ok := userConns[res.ReceiverID]
 			s.mx.RUnlock()
 
-			//if exists send msg directly
-			if ok {
-				res.SenderID = int64(sID)
-				err := destination.conn.Send(res)
-				if status.Code(err) == codes.Unavailable {
-					logger.Error(err)
-					delete(conns, res.ReceiverID)
+			//if user is not connected to this server
+			//try  to send msg to mq, and maybe other instances handle needed connection
+			if !ok {
+				{
+					logger.Info("user is not connected to this server, send msg to MQ")
+					err = s.MQ.ChatMQ.WriteMessages(res)
+					if err != nil {
+						logger.Error("err writing to kafka ", err)
+						continue
+					}
 				}
-				//otherwise user is not connected to this server
-				//so last try is to send msg to mq, and maybe other instances handle needed connection
-				//or user is not cconnected
 			} else {
-				logger.Info("user is not connected to this server, send msg to MQ")
-				err = s.MQ.ChatMQ.WriteMessages(res)
-				if err != nil {
-					logger.Error("err writing to kafka ", err)
-					chatConn.errChan <- err
-					return err
-				}
+				s.sendMsg(res, destination)
 			}
-
 		}
 	}
 }
@@ -170,12 +156,80 @@ func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*UserConnections) {
 		}
 		logger.Info("received msg to ", msg.ReceiverID, " on MQ")
 
+		//get connection with user
 		s.mx.RLock()
-		err = conns[msg.ReceiverID].conn.Send(msg)
-		if err != nil {
-			logger.Error(err)
-			delete(conns, msg.ReceiverID)
-		}
+		uConns, ok := conns[msg.ReceiverID]
 		s.mx.RUnlock()
+		if !ok {
+			continue
+		}
+
+		//send msg
+		s.sendMsgConnection(uConns, msg)
+	}
+}
+
+func (s *ChatServer) addConnection(sID int, out *p.ChatService_ConnectServer) {
+	//check if server has conenction with user
+	s.mx.RLock()
+	conns, ok := userConns[int64(sID)]
+	s.mx.RUnlock()
+
+	//initalise connection object
+	errChan := make(chan error)
+
+	//if dont have, create new struct containg all users connections
+	if !ok {
+		newConn := &UserConnections{ID: sID}
+		newConn.conns = append(newConn.conns, &Connection{conn: *out, errChan: errChan})
+		userConns[int64(sID)] = newConn
+
+		logger.Info("user with id ", sID, " joins to chat")
+
+		// if user already has other connections with this erver, append slice of connections
+	} else {
+		conns.conns = append(conns.conns, &Connection{conn: *out, errChan: errChan})
+
+		logger.Info("user with id ", sID, " have other connections to server")
+
+	}
+}
+
+func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
+	if len(uConns.conns) == 1 {
+		err := uConns.conns[0].conn.Send(msg)
+		if err != nil {
+			uConns.conns[0].errChan <- err
+			logger.Info("only user connection does not respond, remove from map")
+
+			//sendin fails, delete conenctions
+			s.mx.Lock()
+			delete(userConns, int64(uConns.ID))
+			s.mx.Unlock()
+
+		}
+		//if len of user's connections is bigger than 1
+	} else if len(uConns.conns) > 1 {
+		//number of user's connections that will be decremented if coonection does not respond
+		//if it is 0 than user dont have active conns, so remove it from map
+		activeConns := len(uConns.conns)
+
+		for j, v := range uConns.conns {
+			err := v.conn.Send(msg)
+			if err != nil {
+				//send err to chan and decrement num of active conns
+				v.errChan <- err
+				activeConns -= 1
+
+				//remove connection from slice
+				uConns.conns[j] = uConns.conns[len(uConns.conns)-1]
+				uConns.conns[len(uConns.conns)-1] = nil
+				uConns.conns = uConns.conns[:len(uConns.conns)-1]
+			}
+		}
+		//no active conenctions, remove struct
+		if activeConns == 0 {
+			delete(userConns, int64(uConns.ID))
+		}
 	}
 }

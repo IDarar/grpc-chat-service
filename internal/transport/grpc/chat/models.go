@@ -7,6 +7,7 @@ import (
 	"github.com/IDarar/grpc-chat-service/internal/config"
 	"github.com/IDarar/grpc-chat-service/internal/services"
 	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
+	"github.com/IDarar/hub/pkg/logger"
 )
 
 type ChatServer struct {
@@ -16,6 +17,10 @@ type ChatServer struct {
 	Cfg     config.Config
 }
 
+//All user's connections will be definetly only on one instance of app
+//that will be garanued by load balaner
+//So it is not needed to send many abundant messages to MQ in order to ensure
+//that message will be delivered to user
 type UserConnections struct {
 	ID    int
 	conns []*Connection
@@ -39,5 +44,44 @@ func NewServer(cfg *config.Config, services services.Services, mq mq.MQ) *ChatSe
 		Service: services,
 		Cfg:     *cfg,
 		MQ:      mq,
+	}
+}
+
+//send msg, and remove connection if there is an error
+func (s *ChatServer) sendMsgConnection(uConns *UserConnections, msg *p.Message) {
+	if len(uConns.conns) == 1 {
+		err := uConns.conns[0].conn.Send(msg)
+		if err != nil {
+			uConns.conns[0].errChan <- err
+			logger.Info("only user connection does not respond, remove from map")
+
+			//sendin fails, delete conenctions
+			s.mx.Lock()
+			delete(userConns, msg.ReceiverID)
+			s.mx.Unlock()
+		}
+	}
+
+	activeConns := len(uConns.conns)
+
+	for j, v := range uConns.conns {
+		err := v.conn.Send(msg)
+		if err != nil {
+			//send err to chan and decrement num of active conns
+			v.errChan <- err
+			activeConns -= 1
+
+			//remove connection from slice
+			uConns.conns[j] = uConns.conns[len(uConns.conns)-1]
+			uConns.conns[len(uConns.conns)-1] = nil
+			uConns.conns = uConns.conns[:len(uConns.conns)-1]
+		}
+	}
+
+	//no active conenctions, remove struct
+	if activeConns == 0 {
+		s.mx.Lock()
+		delete(userConns, msg.ReceiverID)
+		s.mx.Unlock()
 	}
 }
