@@ -66,9 +66,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 	}
 
 	//initalise connection object
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 
-	s.addConnection(sID, &out)
+	s.addConnection(sID, &out, errChan)
 
 	//handle messages from connection
 	for {
@@ -81,9 +81,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 
 				continue
 			}
+			logger.Info("err on chan, exit goroutine ", err)
 
 			//remove connection
-
 			return err
 		//otherwise handle messages from grpc connections
 		default:
@@ -118,10 +118,12 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 					err = s.MQ.ChatMQ.WriteMessages(res)
 					if err != nil {
 						logger.Error("err writing to kafka ", err)
+
 						continue
 					}
 				}
 			} else {
+				logger.Info("sending to ", res.ReceiverID)
 				s.sendMsg(res, destination)
 			}
 		}
@@ -131,6 +133,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 func (s *ChatServer) GetMessages(ctx context.Context, req *p.RequestChatHistory) (*p.ChatHistory, error) {
 	return nil, nil
 }
+
 func (s *ChatServer) GetInboxes(ctx context.Context, req *p.RequestInboxes) (*p.Chats, error) {
 	return nil, nil
 }
@@ -147,7 +150,6 @@ func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*UserConnections) {
 		msg, err := s.MQ.ChatMQ.ReadMessages()
 		if err != nil {
 			logger.Error(err)
-			logger.Error("error on mq, exit goroutine ...", err)
 			continue
 		}
 		if msg == nil {
@@ -160,6 +162,7 @@ func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*UserConnections) {
 		s.mx.RLock()
 		uConns, ok := conns[msg.ReceiverID]
 		s.mx.RUnlock()
+
 		if !ok {
 			continue
 		}
@@ -169,14 +172,13 @@ func (s *ChatServer) receiveMsgsFromMQ(conns map[int64]*UserConnections) {
 	}
 }
 
-func (s *ChatServer) addConnection(sID int, out *p.ChatService_ConnectServer) {
+func (s *ChatServer) addConnection(sID int, out *p.ChatService_ConnectServer, errChan chan error) {
 	//check if server has conenction with user
 	s.mx.RLock()
 	conns, ok := userConns[int64(sID)]
 	s.mx.RUnlock()
 
 	//initalise connection object
-	errChan := make(chan error)
 
 	//if dont have, create new struct containg all users connections
 	if !ok {
@@ -191,35 +193,44 @@ func (s *ChatServer) addConnection(sID int, out *p.ChatService_ConnectServer) {
 		conns.conns = append(conns.conns, &Connection{conn: *out, errChan: errChan})
 
 		logger.Info("user with id ", sID, " have other connections to server")
-
 	}
 }
 
 func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 	if len(uConns.conns) == 1 {
+		logger.Info("send to only connection ...")
 		err := uConns.conns[0].conn.Send(msg)
 		if err != nil {
 			uConns.conns[0].errChan <- err
-			logger.Info("only user connection does not respond, remove from map")
+			logger.Info("only user's connection does not respond, remove from map")
 
 			//sendin fails, delete conenctions
 			s.mx.Lock()
 			delete(userConns, int64(uConns.ID))
 			s.mx.Unlock()
-
 		}
+
 		//if len of user's connections is bigger than 1
 	} else if len(uConns.conns) > 1 {
 		//number of user's connections that will be decremented if coonection does not respond
 		//if it is 0 than user dont have active conns, so remove it from map
 		activeConns := len(uConns.conns)
+		logger.Info("send to all connections ...")
 
 		for j, v := range uConns.conns {
 			err := v.conn.Send(msg)
 			if err != nil {
-				//send err to chan and decrement num of active conns
-				v.errChan <- err
+
+				//when connection from user brokes the Connect function exits
+				//so there is no goroutine that can read from that channel
+				//and writing to this channel blocks execution of function
+
+				//v.errChan <- err
+
+				// decrement num of active conns
 				activeConns -= 1
+
+				logger.Info("deleting connection from slice of user ", uConns.ID)
 
 				//remove connection from slice
 				uConns.conns[j] = uConns.conns[len(uConns.conns)-1]
@@ -227,9 +238,16 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 				uConns.conns = uConns.conns[:len(uConns.conns)-1]
 			}
 		}
+
 		//no active conenctions, remove struct
 		if activeConns == 0 {
+			logger.Info("deleting whole connection")
 			delete(userConns, int64(uConns.ID))
 		}
+		logger.Info(activeConns, "act")
+		//if 0
+	} else {
+		logger.Info("deleting whole connection")
+		delete(userConns, int64(uConns.ID))
 	}
 }

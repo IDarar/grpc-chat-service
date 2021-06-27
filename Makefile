@@ -1,5 +1,7 @@
 run:
 	go run ./cmd/chat-server/main.go --env
+client:
+	go run ./client/gClient.go
 startcompose:
 	sudo docker-compose up -d	
 stopcompose:
