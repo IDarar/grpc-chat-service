@@ -201,7 +201,6 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 		logger.Info("send to only connection ...")
 		err := uConns.conns[0].conn.Send(msg)
 		if err != nil {
-			uConns.conns[0].errChan <- err
 			logger.Info("only user's connection does not respond, remove from map")
 
 			//sendin fails, delete conenctions
@@ -217,8 +216,8 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 		activeConns := len(uConns.conns)
 		logger.Info("send to all connections ...")
 
-		for j, v := range uConns.conns {
-			err := v.conn.Send(msg)
+		for i := len(uConns.conns) - 1; i >= 0; i-- {
+			err := uConns.conns[i].conn.Send(msg)
 			if err != nil {
 
 				//when connection from user brokes the Connect function exits
@@ -233,7 +232,7 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 				logger.Info("deleting connection from slice of user ", uConns.ID)
 
 				//remove connection from slice
-				uConns.conns[j] = uConns.conns[len(uConns.conns)-1]
+				uConns.conns[i] = uConns.conns[len(uConns.conns)-1]
 				uConns.conns[len(uConns.conns)-1] = nil
 				uConns.conns = uConns.conns[:len(uConns.conns)-1]
 			}
@@ -244,7 +243,6 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 			logger.Info("deleting whole connection")
 			delete(userConns, int64(uConns.ID))
 		}
-		logger.Info(activeConns, "act")
 		//if 0
 	} else {
 		logger.Info("deleting whole connection")
