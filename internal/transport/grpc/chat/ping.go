@@ -9,7 +9,7 @@ import (
 //will ping connections and remove if they dont respond
 func (s *ChatServer) ping() {
 	//in some amount of time
-	ticker := time.NewTicker(20 * time.Second)
+	ticker := time.NewTicker(20 * time.Minute)
 
 	for range ticker.C {
 		//range map of connections
