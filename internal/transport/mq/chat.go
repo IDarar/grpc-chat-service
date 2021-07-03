@@ -43,12 +43,13 @@ func NewKafkaReader(dialer *kafka.Dialer, cfg config.Config) *ChatKafka {
 	return nil
 }
 
-//gets messages from queue and checks if it is for needed user
+//gets messages from queue and passes it ti goroutine that handle messages from mq
 func (k *ChatKafka) ReadMessages() (*p.Message, error) {
 	m, err := k.reader.ReadMessage(context.Background())
 	if err != nil {
 		return nil, err
 	}
+
 	//key is ID of user
 	if string(m.Key) == "" {
 		logger.Info("msg without key")

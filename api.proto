@@ -4,51 +4,56 @@ option go_package = "/chat_service";
 import "google/protobuf/timestamp.proto";
 
 message Message {
-  int64 ID =1;
+  int64 ID = 1;
   int64 Code = 2;
-  int64 SenderID =3;
-  int64 ReceiverID = 4; 
+  int64 SenderID = 3;
+  int64 ReceiverID = 4;
   google.protobuf.Timestamp time = 5;
   string Text = 6;
-  int64 InboxHash = 7; //e g sID 45670 and rID 76416 -> 45670076416
+  int64 InboxHash = 7; // e g sID 45670 and rID 76416 -> 45670076416
+  repeated Image Images = 8;
 }
 
-message Inbox{
-  int64 ID =1;
-  int64 UserID =2; 
-  int64 SenderID =3;
-  string LastMsg =4; 
+message Image {
+  string ImageType = 1;
+  string ImageID = 2;
+  bytes ChankData = 3;
+}
+
+message Inbox {
+  int64 ID = 1;
+  int64 UserID = 2;
+  int64 SenderID = 3;
+  string LastMsg = 4;
   google.protobuf.Timestamp LastMsgTime = 5;
-  int64 UnseenNumber =6;
+  int64 UnseenNumber = 6;
 }
 
-//Send message if user dont have chat with another user
-message RequestCreateInbox{
-  int64 ReceiverID =2;
+// Send message if user dont have chat with another user
+message RequestCreateInbox {
+  int64 ReceiverID = 2;
   string Text = 6;
 }
 
-message RequestChatHistory{
-  int64 InboxHash =1;
+message RequestChatHistory {
+  int64 InboxHash = 1;
   int64 Offset = 3;
 }
-message RequestInboxes{
-  int64 UserID =2; 
-  int64 Offset = 3; //if 0 - all
+message RequestInboxes {
+  int64 UserID = 2;
+  int64 Offset = 3; // if 0 - all
 }
 
-message ChatHistory{ 
-  Inbox Inbox =1;
-  repeated Message messages = 2; 
+message ChatHistory {
+  Inbox Inbox = 1;
+  repeated Message messages = 2;
 }
 
-message Chats{ 
-  repeated Inbox messages = 1; 
-}
+message Chats { repeated Inbox messages = 1; }
 
-service ChatService { 
-  rpc Connect(stream Message) returns (stream Message); 
-  rpc GetMessages (RequestChatHistory)returns(ChatHistory);
-  rpc GetInboxes (RequestInboxes)returns(Chats);
-  rpc CreateInbox (RequestCreateInbox)returns(ChatHistory);
+service ChatService {
+  rpc Connect(stream Message) returns (stream Message);
+  rpc GetMessages(RequestChatHistory) returns (ChatHistory);
+  rpc GetInboxes(RequestInboxes) returns (Chats);
+  rpc CreateInbox(RequestCreateInbox) returns (ChatHistory);
 }

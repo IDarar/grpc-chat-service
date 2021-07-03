@@ -94,6 +94,42 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				return err
 			}
 
+			//if message contains images
+			if len(res.GetImages()) != 0 {
+				//save images and get kist of ids
+				s.Service.Messages.Save(res, errChan)
+				if err != nil {
+					//if error during saving, send code Failed and restart loop
+					logError(err)
+					out.Send(&p.Message{Code: Failed})
+
+					continue
+				}
+				//get the connection from map
+				s.mx.RLock()
+				destination, ok := userConns[res.ReceiverID]
+				s.mx.RUnlock()
+
+				//if user is not connected to this server
+				//try  to send msg to mq, and maybe other instances handle needed connection
+				if !ok {
+					{
+						logger.Info("user is not connected to this server, send msg to MQ")
+						err = s.MQ.ChatMQ.WriteMessages(res)
+						if err != nil {
+							logger.Error("err writing to kafka ", err)
+
+							continue
+						}
+					}
+				} else {
+					logger.Info("sending to ", res.ReceiverID)
+					s.sendMsg(res, destination)
+					continue
+				}
+				continue
+			}
+
 			logger.Info(res)
 
 			res.SenderID = int64(sID)
@@ -248,4 +284,11 @@ func (s *ChatServer) sendMsg(msg *p.Message, uConns *UserConnections) {
 		logger.Info("deleting whole connection")
 		delete(userConns, int64(uConns.ID))
 	}
+}
+
+func logError(err error) error {
+	if err != nil {
+		logger.Error(err)
+	}
+	return err
 }

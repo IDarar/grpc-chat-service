@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS images;
+
 DROP TABLE IF EXISTS messages;
 
 DROP TABLE IF EXISTS inboxes;

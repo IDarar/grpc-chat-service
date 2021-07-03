@@ -1,13 +1,18 @@
 package services
 
 import (
+	"bytes"
+
 	"github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/repository"
+	"github.com/IDarar/hub/pkg/logger"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MessagesService struct {
-	repo repository.Messages
+	repo       repository.Messages
+	imageStore repository.Images
 }
 
 func (s *MessagesService) Save(msg *chat_service.Message, errCh chan error) {
@@ -16,15 +21,45 @@ func (s *MessagesService) Save(msg *chat_service.Message, errCh chan error) {
 	msg.InboxHash = senderID*padding(msg.ReceiverID) + msg.ReceiverID
 	msg.Time = timestamppb.Now()
 
+	if len(msg.Images) != 0 {
+		err := s.SaveImage(msg.Images)
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}
+
 	err := s.repo.Save(msg)
 	if err != nil {
 		errCh <- err
 	}
 }
 
-func NewMessagesService(repo repository.Messages) *MessagesService {
+//saves images and sets ids to each
+func (s *MessagesService) SaveImage(imgs []*chat_service.Image) error {
+	for _, v := range imgs {
+		imageData := bytes.Buffer{}
+
+		_, err := imageData.Write(v.ChankData)
+		if err != nil {
+			return logError(err)
+		}
+
+		id, err := s.imageStore.Save(v.ImageType, imageData)
+		if err != nil {
+			return logError(err)
+		}
+		v.ImageID = id
+		v.ChankData
+	}
+
+	return nil
+}
+
+func NewMessagesService(repo repository.Messages, imageStore repository.Images) *MessagesService {
 	return &MessagesService{
-		repo: repo,
+		repo:       repo,
+		imageStore: imageStore,
 	}
 
 }
@@ -37,4 +72,11 @@ func padding(n int64) int64 {
 	}
 
 	return p
+}
+
+func logError(err error) error {
+	if err != nil {
+		logger.Error(err)
+	}
+	return err
 }

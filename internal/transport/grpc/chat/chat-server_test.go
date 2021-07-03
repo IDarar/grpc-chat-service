@@ -23,6 +23,7 @@ type testSendMsgChatService_ConnectServer struct {
 	closed bool
 }
 
+//mock implementaion of server connections stream
 func (t *testSendMsgChatService_ConnectServer) Send(*p.Message) error {
 	if t.closed {
 		return errors.New("connection closed")

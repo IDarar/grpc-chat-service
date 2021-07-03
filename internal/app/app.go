@@ -33,7 +33,7 @@ func Run(configPath string) {
 
 	defer db.Close()
 
-	repos := repository.NewRepositories(db)
+	repos := repository.NewRepositories(db, "../../../images")
 
 	services := services.NewServices(services.Deps{Repos: repos})
 
