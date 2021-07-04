@@ -25,8 +25,8 @@ type (
 		ServerCertFile   string `mapstructure:"servercertfile"`
 		ServerKeyFile    string `mapstructure:"serverkeyfile"`
 		ClientCACertFile string `mapstructure:"clientcacertfile"`
-		ClientKeyFile    string `mapstructure:"clinetkeyfile"`
-		ClientCertFile   string `mapstructure:"clinetcertfile"`
+		ClientKeyFile    string `mapstructure:"clientkeyfile"`
+		ClientCertFile   string `mapstructure:"clientcertfile"`
 	}
 	KafkaConfig struct {
 		Host              string

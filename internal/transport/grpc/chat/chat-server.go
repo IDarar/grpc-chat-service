@@ -9,6 +9,7 @@ import (
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/domain"
+	"github.com/IDarar/grpc-chat-service/pkg/tlscredentials"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"google.golang.org/grpc"
@@ -18,9 +19,18 @@ import (
 func ChatServerRun(s *ChatServer) error {
 	defer recover()
 
+	//enable tls
+	tlsCredentials, err := tlscredentials.LoadTLSCredentialsServer(&s.Cfg)
+	if err != nil {
+		return fmt.Errorf("cannot load TLS credentials: %w", err)
+	}
+
+	opts := []grpc.ServerOption{}
+	opts = append(opts, grpc.Creds(tlsCredentials))
+
 	s.mx = sync.RWMutex{}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(opts...)
 
 	userConns = make(map[int64]*UserConnections)
 

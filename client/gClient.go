@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	//
 	p "github.com/IDarar/grpc-chat-service/chat_service"
+	"github.com/IDarar/grpc-chat-service/internal/config"
+	"github.com/IDarar/grpc-chat-service/pkg/tlscredentials"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"golang.org/x/net/context"
@@ -17,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var port = ":7777"
+var port = "0.0.0.0:7777"
 
 const (
 	Greet   = 0
@@ -28,7 +31,22 @@ const (
 )
 
 func main() {
-	conn, err := grpc.Dial(port, grpc.WithInsecure())
+	envInit()
+
+	cfg, err := config.Init("configs/main")
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	tlsCredentials, err := tlscredentials.LoadTLSCredentialsClient(cfg)
+	if err != nil {
+		log.Fatal("cannot load TLS credentials: ", err)
+	}
+
+	transportOption := grpc.WithTransportCredentials(tlsCredentials)
+
+	conn, err := grpc.Dial(port, transportOption)
 	if err != nil {
 		fmt.Println("Dial:", err)
 		return
@@ -200,4 +218,28 @@ func getCtxWithName() (context.Context, error) {
 		metadata.Pairs("user_id", name))
 
 	return ctx, nil
+}
+
+//to avoid panic on initalising config
+//TODO add different config for client
+func envInit() {
+	e := flag.Bool("env", false, "run app local?")
+
+	flag.Parse()
+	logger.Info("deploy env is ", *e)
+
+	if *e {
+		os.Setenv("MYSQL_PORT", "3306")
+		os.Setenv("MYSQL_DATABASE", "chat")
+		os.Setenv("MYSQL_PASSWORDGO", "secret")
+
+		os.Setenv("KAFKA_USERSASL", "admin")
+		os.Setenv("KAFKA_PASSWORDSASL", "admin-secret")
+		os.Setenv("KAFKA_HOST", "localhost:9092")
+		os.Setenv("KAFKA_NUMPARTITIONS", "0")
+		os.Setenv("KAFKA_REPLICATIONFACTOR", "0")
+		os.Setenv("KAFKA_GROUPID", "chat_s1")
+		//TODO env for test db
+		//os.Setenv("DATABASE_URL", "user=postgres dbname=hub_tests password=123 sslmode=disabled")
+	}
 }
