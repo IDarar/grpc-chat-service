@@ -95,7 +95,8 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 			}
 
 			//if message contains images
-			if len(res.GetImages()) != 0 {
+			if len(res.Images) != 0 {
+				logger.Info("num of images: ", len(res.Images))
 				//save images and get kist of ids
 				s.Service.Messages.Save(res, errChan)
 				if err != nil {
@@ -130,7 +131,7 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				continue
 			}
 
-			logger.Info(res)
+			logger.Info(res.Text)
 
 			res.SenderID = int64(sID)
 

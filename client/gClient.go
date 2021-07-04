@@ -47,7 +47,6 @@ func Connect(client p.ChatServiceClient) error {
 		return err
 	}
 
-	logger.Info("ctx is ", ctx)
 	stream, err := client.Connect(ctx)
 	if err != nil {
 		logger.Error(err)
@@ -89,6 +88,12 @@ func receiveMsgs(stream p.ChatService_ConnectClient, errChan chan error) {
 				errChan <- err
 				return
 			}
+			if len(res.Images) != 0 {
+				logger.Info("You received a message from ", res.SenderID, " text is ", res.Text, " code is ", res.Code, "images ids: ", res.Images)
+
+				continue
+			}
+
 			logger.Info("You received a message from ", res.SenderID, " text is ", res.Text, " code is ", res.Code)
 
 		}
@@ -119,7 +124,51 @@ func sendMsgs(stream p.ChatService_ConnectClient, errChan chan error) {
 			scanner.Scan()
 
 			text := scanner.Text()
+
+			fmt.Println("Number of images to message ...")
+			scanner.Scan()
+
+			num := scanner.Text()
+
+			numInt, err := strconv.Atoi(num)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
 			msg := p.Message{ReceiverID: int64(rID), Text: text, Time: timestamppb.Now()}
+			//send images
+			if numInt != 0 {
+
+				for i := 0; i < numInt; i++ {
+					/*file, err := os.Open("./1.png")
+					if err != nil {
+						log.Fatal("cannot open image file: ", err)
+					}
+					defer file.Close()*/
+
+					//buffer := []byte{}
+
+					n, err := os.ReadFile("./1.png")
+
+					if err != nil {
+						log.Fatal("cannot read image file: ", err)
+					}
+
+					logger.Info("num of bytes: ", len(n))
+
+					msg.Images = append(msg.Images, &p.Image{ImageType: "png", ChankData: n})
+				}
+
+				err = stream.Send(&msg)
+				if err != nil {
+					logger.Error(err)
+					errChan <- err
+					return
+				}
+				logger.Info("sended")
+
+				continue
+			}
 
 			err = stream.Send(&msg)
 			if err != nil {

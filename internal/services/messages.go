@@ -49,6 +49,13 @@ func (s *MessagesService) SaveImage(imgs []*chat_service.Image) error {
 		if err != nil {
 			return logError(err)
 		}
+
+		//random generating of ids for images depends on current time
+		//that can't update itself to give random value
+		//so TODO change way of generating random ids for images
+		//time.Sleep(100 * time.Millisecond)
+
+		v.ChankData = nil
 		v.ImageID = id
 	}
 

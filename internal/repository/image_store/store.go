@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/IDarar/hub/pkg/logger"
 )
 
 type DiskImageStore struct {
@@ -30,16 +32,18 @@ func (s *DiskImageStore) Save(ext string, imageData *bytes.Buffer) (string, erro
 		return "", fmt.Errorf("cannot create image file: %w", err)
 	}
 
-	_, err = imageData.WriteTo(file)
+	n, err := imageData.WriteTo(file)
 	if err != nil {
 		return "", fmt.Errorf("cannot write image to file: %w", err)
 	}
+
+	logger.Info("bytes written: ", n)
 
 	return imageID + "." + ext, nil
 }
 
 func RandomString() string {
-	rand.Seed(time.Now().Unix())
+	rand.Seed(int64(time.Now().UnixNano()))
 
 	charSet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstxyz0123456789"
 	var output strings.Builder
