@@ -19,10 +19,11 @@ func NewDiskImageStore(imageFolder string) *DiskImageStore {
 	}
 }
 
-func (s *DiskImageStore) Save(ext string, imageData bytes.Buffer) (string, error) {
+func (s *DiskImageStore) Save(ext string, imageData *bytes.Buffer) (string, error) {
+
 	imageID := RandomString()
 
-	imagePath := fmt.Sprintf("%s/%s%s", s.ImageFolder, imageID, ext)
+	imagePath := fmt.Sprintf("%s/%s.%s", s.ImageFolder, imageID, ext)
 
 	file, err := os.Create(imagePath)
 	if err != nil {
@@ -34,7 +35,7 @@ func (s *DiskImageStore) Save(ext string, imageData bytes.Buffer) (string, error
 		return "", fmt.Errorf("cannot write image to file: %w", err)
 	}
 
-	return imagePath, nil
+	return imageID + "." + ext, nil
 }
 
 func RandomString() string {

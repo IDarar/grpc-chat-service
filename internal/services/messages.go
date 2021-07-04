@@ -38,7 +38,7 @@ func (s *MessagesService) Save(msg *chat_service.Message, errCh chan error) {
 //saves images and sets ids to each
 func (s *MessagesService) SaveImage(imgs []*chat_service.Image) error {
 	for _, v := range imgs {
-		imageData := bytes.Buffer{}
+		imageData := &bytes.Buffer{}
 
 		_, err := imageData.Write(v.ChankData)
 		if err != nil {
@@ -50,7 +50,6 @@ func (s *MessagesService) SaveImage(imgs []*chat_service.Image) error {
 			return logError(err)
 		}
 		v.ImageID = id
-		v.ChankData
 	}
 
 	return nil

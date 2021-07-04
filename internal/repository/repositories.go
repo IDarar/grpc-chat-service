@@ -9,17 +9,19 @@ import (
 	"github.com/IDarar/grpc-chat-service/internal/repository/mysql"
 )
 
+//go:generate mockgen -source=repositories.go -destination=mock_repository/repo_mocks.go
+
 type Messages interface {
 	Save(msg *p.Message) error
+}
+
+type Images interface {
+	Save(ext string, imageData *bytes.Buffer) (string, error)
 }
 
 type Repositories struct {
 	Messages Messages
 	Images   Images
-}
-
-type Images interface {
-	Save(ext string, imageData bytes.Buffer) (string, error)
 }
 
 func NewRepositories(db *sql.DB, imageFolder string) *Repositories {
