@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	github.com/IDarar/hub v0.0.0-20210612201131-24578e8e2454
-	github.com/IDarar/notifications-service v0.0.0-20210510195302-0c0273d8dc84
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.5.0
 	github.com/golang/snappy v0.0.4 // indirect

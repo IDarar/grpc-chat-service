@@ -10,8 +10,6 @@ import (
 
 	//
 	p "github.com/IDarar/grpc-chat-service/chat_service"
-	"github.com/IDarar/grpc-chat-service/internal/config"
-	"github.com/IDarar/grpc-chat-service/pkg/tlscredentials"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"golang.org/x/net/context"
@@ -23,30 +21,30 @@ import (
 var port = "0.0.0.0:7777"
 
 const (
-	Greet   = 0
 	Message = iota
-	Close   = iota
-	Sended  = iota
-	Failed  = iota
+	Greet
+	Close
+	Sended
+	Failed
 )
 
 func main() {
-	envInit()
+	/*envInit()
 
-	cfg, err := config.Init("configs/main")
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
+		cfg, err := config.Init("configs/main")
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		_ = cfg
 	tlsCredentials, err := tlscredentials.LoadTLSCredentialsClient(cfg)
-	if err != nil {
-		log.Fatal("cannot load TLS credentials: ", err)
-	}
+		if err != nil {
+			log.Fatal("cannot load TLS credentials: ", err)
+		}
 
-	transportOption := grpc.WithTransportCredentials(tlsCredentials)
+		transportOption := grpc.WithTransportCredentials(tlsCredentials)*/
 
-	conn, err := grpc.Dial(port, transportOption)
+	conn, err := grpc.Dial(port, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Dial:", err)
 		return

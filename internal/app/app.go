@@ -11,13 +11,12 @@ import (
 	"github.com/IDarar/grpc-chat-service/internal/services"
 	"github.com/IDarar/grpc-chat-service/internal/transport/grpc/chat"
 	"github.com/IDarar/grpc-chat-service/internal/transport/mq"
-
 	"github.com/IDarar/hub/pkg/logger"
 )
 
 func Run(configPath string) {
-	envInit()
 
+	envInit()
 	cfg, err := config.Init(configPath)
 	if err != nil {
 		logger.Error(err)

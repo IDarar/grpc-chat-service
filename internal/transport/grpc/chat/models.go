@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"reflect"
 	"sync"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
@@ -44,6 +45,7 @@ func NewServer(cfg *config.Config, services services.Services, mq mq.MQ) *ChatSe
 		Service: services,
 		Cfg:     *cfg,
 		MQ:      mq,
+		mx:      sync.RWMutex{},
 	}
 }
 
@@ -84,4 +86,18 @@ func (s *ChatServer) sendMsgConnection(uConns *UserConnections, msg *p.Message) 
 		delete(userConns, msg.ReceiverID)
 		s.mx.Unlock()
 	}
+}
+
+//get file descriptor of grpc stream
+//dont hane sense untill I know how to preserve connections
+//with returning from function
+func streamFD(srvStream p.ChatService_ConnectServer) int {
+	ServerStream := reflect.Indirect(reflect.ValueOf(srvStream)).FieldByName("ServerStream").Elem().Elem()
+	stream := reflect.Indirect(ServerStream).FieldByName("s").Elem()
+	streamTransport := reflect.Indirect(stream).FieldByName("st").Elem()
+	conn := reflect.Indirect(streamTransport).FieldByName("conn").Elem()
+	fdVall := reflect.Indirect(conn).FieldByName("fd")
+	pfdVall := reflect.Indirect(fdVall).FieldByName("pfd")
+
+	return int(pfdVall.FieldByName("Sysfd").Int())
 }

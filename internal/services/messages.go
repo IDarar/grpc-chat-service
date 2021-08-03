@@ -28,6 +28,8 @@ func (s *MessagesService) Save(msg *chat_service.Message, errCh chan error) {
 			return
 		}
 	}
+	var a int
+	a &= 0x00
 
 	err := s.repo.Save(msg)
 	if err != nil {

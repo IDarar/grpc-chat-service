@@ -7,11 +7,11 @@ var (
 )
 
 const (
-	Greet    = 0
-	Message  = iota
-	Close    = iota
-	Sended   = iota
-	Failed   = iota
-	NewInbox = iota
-	Ping     = iota
+	Greet = iota
+	Message
+	Close
+	Sended
+	Failed
+	NewInbox
+	Ping
 )

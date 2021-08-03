@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync"
 
 	p "github.com/IDarar/grpc-chat-service/chat_service"
 	"github.com/IDarar/grpc-chat-service/internal/domain"
-	"github.com/IDarar/grpc-chat-service/pkg/tlscredentials"
 
 	"github.com/IDarar/hub/pkg/logger"
 	"google.golang.org/grpc"
@@ -17,20 +15,22 @@ import (
 )
 
 func ChatServerRun(s *ChatServer) error {
-	defer recover()
+	defer func() {
+		if c := recover(); c != nil {
+			fmt.Println("Recover server")
+		}
+	}()
 
 	//enable tls
-	tlsCredentials, err := tlscredentials.LoadTLSCredentialsServer(&s.Cfg)
+	/*tlsCredentials, err := tlscredentials.LoadTLSCredentialsServer(&s.Cfg)
 	if err != nil {
 		return fmt.Errorf("cannot load TLS credentials: %w", err)
 	}
 
 	opts := []grpc.ServerOption{}
-	opts = append(opts, grpc.Creds(tlsCredentials))
+	opts = append(opts, grpc.Creds(tlsCredentials))*/
 
-	s.mx = sync.RWMutex{}
-
-	server := grpc.NewServer(opts...)
+	server := grpc.NewServer()
 
 	userConns = make(map[int64]*UserConnections)
 
@@ -52,8 +52,9 @@ func ChatServerRun(s *ChatServer) error {
 	return server.Serve(listen)
 }
 
-//On first request from client we store connection, on further requests handle messages
 func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
+
+	//On first request from client we store connection, on further requests handle messages
 	_, err := out.Recv()
 	if err != nil {
 		logger.Error(err)
@@ -141,13 +142,9 @@ func (s *ChatServer) Connect(out p.ChatService_ConnectServer) error {
 				continue
 			}
 
-			logger.Info(res.Text)
-
 			res.SenderID = int64(sID)
 
-			logger.Info("received msg from ", res.SenderID)
-
-			logger.Info("received msg to ", res.ReceiverID, " on gRPC")
+			logMsg(res)
 
 			//save msg asyncroniously
 			go s.Service.Messages.Save(res, errChan)
@@ -302,4 +299,13 @@ func logError(err error) error {
 		logger.Error(err)
 	}
 	return err
+}
+
+func logMsg(msg *p.Message) {
+	logger.Info(msg.Text)
+
+	logger.Info("received msg from ", msg.SenderID)
+
+	logger.Info("received msg to ", msg.ReceiverID, " on gRPC")
+
 }
